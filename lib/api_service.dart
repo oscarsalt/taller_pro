@@ -3,7 +3,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://10.0.2.2/taller-manager/api/index.php';
+  // static const String baseUrl = 'http://10.0.2.2/taller-manager/api/index.php';
+  static const String baseUrl = 'http://localhost/taller-manager/api/index.php';
 
   // Obtener el token guardado
   static Future<String?> getToken() async {
