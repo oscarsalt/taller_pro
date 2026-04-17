@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../screens/dashboard_screen.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -46,8 +47,7 @@ class _MainLayoutState extends State<MainLayout> {
   Widget _buildCurrentScreen() {
     switch (_currentIndex) {
       case 0:
-        return const _PlaceholderScreen(
-            title: 'Dashboard', icon: Icons.dashboard);
+        return const DashboardScreen();
       case 1:
         return const _PlaceholderScreen(title: 'Clientes', icon: Icons.people);
       case 2:
@@ -57,8 +57,7 @@ class _MainLayoutState extends State<MainLayout> {
         return const _PlaceholderScreen(
             title: 'Citas', icon: Icons.calendar_month);
       default:
-        return const _PlaceholderScreen(
-            title: 'Dashboard', icon: Icons.dashboard);
+        return const DashboardScreen();
     }
   }
 
