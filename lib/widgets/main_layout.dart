@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:taller_pro/screens/clientes_screen.dart';
 import '../screens/dashboard_screen.dart';
+import '../screens/vehiculos_screen.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -52,8 +53,7 @@ class _MainLayoutState extends State<MainLayout> {
       case 1:
         return const ClientesScreen();
       case 2:
-        return const _PlaceholderScreen(
-            title: 'Vehículos', icon: Icons.directions_car);
+        return const VehiculosScreen();
       case 3:
         return const _PlaceholderScreen(
             title: 'Citas', icon: Icons.calendar_month);
