@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:taller_pro/screens/citas_screen.dart';
 import 'package:taller_pro/screens/clientes_screen.dart';
 import '../screens/dashboard_screen.dart';
 import '../screens/vehiculos_screen.dart';
@@ -55,8 +56,7 @@ class _MainLayoutState extends State<MainLayout> {
       case 2:
         return const VehiculosScreen();
       case 3:
-        return const _PlaceholderScreen(
-            title: 'Citas', icon: Icons.calendar_month);
+        return const CitasScreen();
       default:
         return const DashboardScreen();
     }
