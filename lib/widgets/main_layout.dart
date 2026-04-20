@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:taller_pro/screens/citas_screen.dart';
-import 'package:taller_pro/screens/clientes_screen.dart';
+
+import '../screens/citas_screen.dart';
+import '../screens/clientes_screen.dart';
 import '../screens/dashboard_screen.dart';
 import '../screens/vehiculos_screen.dart';
 
@@ -235,34 +236,4 @@ class _NavItem {
     required this.activeIcon,
     required this.label,
   });
-}
-
-class _PlaceholderScreen extends StatelessWidget {
-  final String title;
-  final IconData icon;
-
-  const _PlaceholderScreen({required this.title, required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 60, color: const Color(0xFFE67E22)),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text('Próximamente...', style: TextStyle(color: Colors.grey)),
-        ],
-      ),
-    );
-  }
 }
