@@ -72,12 +72,10 @@ class _CitasScreenState extends State<CitasScreen> {
     if (vehiculoSeleccionado == null ||
         fechaSeleccionada == null ||
         horaSeleccionada == null) return;
-
     final fecha =
         '${fechaSeleccionada!.year}-${fechaSeleccionada!.month.toString().padLeft(2, '0')}-${fechaSeleccionada!.day.toString().padLeft(2, '0')}';
     final hora =
         '${horaSeleccionada!.hour.toString().padLeft(2, '0')}:${horaSeleccionada!.minute.toString().padLeft(2, '0')}:00';
-
     try {
       await ApiService.post('/citas', {
         'id_vehiculo': vehiculoSeleccionado,
@@ -90,18 +88,230 @@ class _CitasScreenState extends State<CitasScreen> {
         'piezas': double.tryParse(piezasController.text) ?? 0,
         'otros': double.tryParse(otrosController.text) ?? 0,
       });
-      descripcionController.clear();
-      manoObraController.clear();
-      piezasController.clear();
-      otrosController.clear();
-      vehiculoSeleccionado = null;
-      clienteSeleccionado = null;
-      fechaSeleccionada = null;
-      horaSeleccionada = null;
+      _limpiarFormulario();
       await cargarDatos();
-    } catch (e) {
-      // error
+    } catch (e) {}
+  }
+
+  void _limpiarFormulario() {
+    descripcionController.clear();
+    manoObraController.clear();
+    piezasController.clear();
+    otrosController.clear();
+    vehiculoSeleccionado = null;
+    clienteSeleccionado = null;
+    fechaSeleccionada = null;
+    horaSeleccionada = null;
+  }
+
+  void mostrarFormularioEdicion(dynamic cita) {
+    descripcionController.text = cita['descripcion'] ?? '';
+    manoObraController.text = cita['mano_obra']?.toString() ?? '0';
+    piezasController.text = cita['piezas']?.toString() ?? '0';
+    otrosController.text = cita['otros']?.toString() ?? '0';
+
+    final partesFecha = cita['fecha']?.split('-');
+    if (partesFecha != null && partesFecha.length == 3) {
+      fechaSeleccionada = DateTime(int.parse(partesFecha[0]),
+          int.parse(partesFecha[1]), int.parse(partesFecha[2]));
     }
+
+    final partesHora = cita['hora']?.split(':');
+    if (partesHora != null && partesHora.length >= 2) {
+      horaSeleccionada = TimeOfDay(
+          hour: int.parse(partesHora[0]), minute: int.parse(partesHora[1]));
+    }
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: cardColor,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => SingleChildScrollView(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Editar cita',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              GestureDetector(
+                onTap: () async {
+                  final fecha = await showDatePicker(
+                    context: ctx,
+                    initialDate: fechaSeleccionada ?? DateTime.now(),
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime.now().add(const Duration(days: 365)),
+                    builder: (ctx, child) => Theme(
+                      data: ThemeData.dark().copyWith(
+                          colorScheme:
+                              const ColorScheme.dark(primary: accentColor)),
+                      child: child!,
+                    ),
+                  );
+                  if (fecha != null)
+                    setModalState(() => fechaSeleccionada = fecha);
+                },
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                  decoration: BoxDecoration(
+                      color: const Color(0xFF333333),
+                      borderRadius: BorderRadius.circular(10)),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_today_outlined,
+                          color: Colors.grey, size: 20),
+                      const SizedBox(width: 12),
+                      Text(
+                        fechaSeleccionada != null
+                            ? '${fechaSeleccionada!.day}/${fechaSeleccionada!.month}/${fechaSeleccionada!.year}'
+                            : 'Seleccionar fecha',
+                        style: TextStyle(
+                            color: fechaSeleccionada != null
+                                ? Colors.white
+                                : Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: () async {
+                  final hora = await showTimePicker(
+                    context: ctx,
+                    initialTime: horaSeleccionada ?? TimeOfDay.now(),
+                    builder: (ctx, child) => Theme(
+                      data: ThemeData.dark().copyWith(
+                          colorScheme:
+                              const ColorScheme.dark(primary: accentColor)),
+                      child: child!,
+                    ),
+                  );
+                  if (hora != null)
+                    setModalState(() => horaSeleccionada = hora);
+                },
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                  decoration: BoxDecoration(
+                      color: const Color(0xFF333333),
+                      borderRadius: BorderRadius.circular(10)),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.access_time_outlined,
+                          color: Colors.grey, size: 20),
+                      const SizedBox(width: 12),
+                      Text(
+                        horaSeleccionada != null
+                            ? '${horaSeleccionada!.hour.toString().padLeft(2, '0')}:${horaSeleccionada!.minute.toString().padLeft(2, '0')}'
+                            : 'Seleccionar hora',
+                        style: TextStyle(
+                            color: horaSeleccionada != null
+                                ? Colors.white
+                                : Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              _buildInput(descripcionController, 'Descripción',
+                  Icons.description_outlined),
+              const SizedBox(height: 12),
+              const Text('Desglose de costes',
+                  style: TextStyle(color: Colors.grey, fontSize: 13)),
+              const SizedBox(height: 8),
+              _buildInput(
+                  manoObraController, 'Mano de obra (€)', Icons.build_outlined,
+                  tipo: TextInputType.number,
+                  onChanged: () => setModalState(() {})),
+              const SizedBox(height: 8),
+              _buildInput(piezasController, 'Piezas / Recambios (€)',
+                  Icons.inventory_2_outlined,
+                  tipo: TextInputType.number,
+                  onChanged: () => setModalState(() {})),
+              const SizedBox(height: 8),
+              _buildInput(otrosController, 'Otros conceptos (€)',
+                  Icons.add_circle_outline,
+                  tipo: TextInputType.number,
+                  onChanged: () => setModalState(() {})),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF27AE60).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                      color: const Color(0xFF27AE60).withOpacity(0.3)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Total con IVA (21%):',
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold)),
+                    Text('${totalConIVA.toStringAsFixed(2)} €',
+                        style: const TextStyle(
+                            color: Color(0xFF27AE60),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    if (fechaSeleccionada == null || horaSeleccionada == null)
+                      return;
+                    Navigator.pop(ctx);
+                    final fecha =
+                        '${fechaSeleccionada!.year}-${fechaSeleccionada!.month.toString().padLeft(2, '0')}-${fechaSeleccionada!.day.toString().padLeft(2, '0')}';
+                    final hora =
+                        '${horaSeleccionada!.hour.toString().padLeft(2, '0')}:${horaSeleccionada!.minute.toString().padLeft(2, '0')}:00';
+                    await ApiService.put('/citas/${cita['id_cita']}', {
+                      'fecha': fecha,
+                      'hora': hora,
+                      'descripcion': descripcionController.text,
+                      'mano_obra':
+                          double.tryParse(manoObraController.text) ?? 0,
+                      'piezas': double.tryParse(piezasController.text) ?? 0,
+                      'otros': double.tryParse(otrosController.text) ?? 0,
+                    });
+                    _limpiarFormulario();
+                    await cargarDatos();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: accentColor,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: const Text('Guardar cambios',
+                      style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> eliminarCita(int id) async {
@@ -111,8 +321,8 @@ class _CitasScreenState extends State<CitasScreen> {
         backgroundColor: cardColor,
         title:
             const Text('Eliminar cita', style: TextStyle(color: Colors.white)),
-        content: const Text('¿Estás seguro de que quieres eliminar esta cita?',
-            style: TextStyle(color: Colors.grey)),
+        content:
+            const Text('¿Estás seguro?', style: TextStyle(color: Colors.grey)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
@@ -137,6 +347,7 @@ class _CitasScreenState extends State<CitasScreen> {
   }
 
   void mostrarFormulario() {
+    _limpiarFormulario();
     showModalBottomSheet(
       context: context,
       backgroundColor: cardColor,
@@ -162,8 +373,6 @@ class _CitasScreenState extends State<CitasScreen> {
                       fontSize: 18,
                       fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
-
-              // Selector de vehículo
               DropdownButtonFormField<String>(
                 value: vehiculoSeleccionado,
                 dropdownColor: const Color(0xFF333333),
@@ -202,8 +411,6 @@ class _CitasScreenState extends State<CitasScreen> {
                 },
               ),
               const SizedBox(height: 12),
-
-              // Fecha
               GestureDetector(
                 onTap: () async {
                   final fecha = await showDatePicker(
@@ -225,9 +432,8 @@ class _CitasScreenState extends State<CitasScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF333333),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                      color: const Color(0xFF333333),
+                      borderRadius: BorderRadius.circular(10)),
                   child: Row(
                     children: [
                       const Icon(Icons.calendar_today_outlined,
@@ -247,8 +453,6 @@ class _CitasScreenState extends State<CitasScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-
-              // Hora
               GestureDetector(
                 onTap: () async {
                   final hora = await showTimePicker(
@@ -268,9 +472,8 @@ class _CitasScreenState extends State<CitasScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF333333),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                      color: const Color(0xFF333333),
+                      borderRadius: BorderRadius.circular(10)),
                   child: Row(
                     children: [
                       const Icon(Icons.access_time_outlined,
@@ -290,12 +493,9 @@ class _CitasScreenState extends State<CitasScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-
               _buildInput(descripcionController, 'Descripción',
                   Icons.description_outlined),
               const SizedBox(height: 12),
-
-              // Desglose de costes
               const Text('Desglose de costes',
                   style: TextStyle(color: Colors.grey, fontSize: 13)),
               const SizedBox(height: 8),
@@ -314,7 +514,6 @@ class _CitasScreenState extends State<CitasScreen> {
                   tipo: TextInputType.number,
                   onChanged: () => setModalState(() {})),
               const SizedBox(height: 8),
-
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -337,7 +536,6 @@ class _CitasScreenState extends State<CitasScreen> {
                   ],
                 ),
               ),
-
               const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
@@ -555,7 +753,6 @@ class _CitasScreenState extends State<CitasScreen> {
                                               fontWeight: FontWeight.bold),
                                         ),
                                         const Spacer(),
-                                        // Cambiar estado
                                         PopupMenuButton<String>(
                                           color: const Color(0xFF333333),
                                           child: Container(
@@ -609,6 +806,15 @@ class _CitasScreenState extends State<CitasScreen> {
                                                   int.parse(
                                                       c['id_cita'].toString()),
                                                   nuevoEstado),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        IconButton(
+                                          icon: const Icon(Icons.edit_outlined,
+                                              color: accentColor, size: 20),
+                                          onPressed: () =>
+                                              mostrarFormularioEdicion(c),
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(),
                                         ),
                                         const SizedBox(width: 8),
                                         IconButton(

@@ -55,9 +55,81 @@ class _ClientesScreenState extends State<ClientesScreen> {
       emailController.clear();
       direccionController.clear();
       await cargarClientes();
-    } catch (e) {
-      // error
-    }
+    } catch (e) {}
+  }
+
+  void mostrarFormularioEdicion(dynamic cliente) {
+    nombreController.text = cliente['nombre'] ?? '';
+    telefonoController.text = cliente['telefono'] ?? '';
+    emailController.text = cliente['email'] ?? '';
+    direccionController.text = cliente['direccion'] ?? '';
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: cardColor,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 20,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Editar cliente',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            _buildInput(nombreController, 'Nombre *', Icons.person_outline),
+            const SizedBox(height: 12),
+            _buildInput(telefonoController, 'Teléfono', Icons.phone_outlined),
+            const SizedBox(height: 12),
+            _buildInput(emailController, 'Email', Icons.email_outlined,
+                tipo: TextInputType.emailAddress),
+            const SizedBox(height: 12),
+            _buildInput(
+                direccionController, 'Dirección', Icons.location_on_outlined),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  await ApiService.put('/clientes/${cliente['id_cliente']}', {
+                    'nombre': nombreController.text,
+                    'telefono': telefonoController.text,
+                    'email': emailController.text,
+                    'direccion': direccionController.text,
+                  });
+                  nombreController.clear();
+                  telefonoController.clear();
+                  emailController.clear();
+                  direccionController.clear();
+                  await cargarClientes();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: accentColor,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                ),
+                child: const Text('Guardar cambios',
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> eliminarCliente(int id) async {
@@ -67,9 +139,8 @@ class _ClientesScreenState extends State<ClientesScreen> {
         backgroundColor: cardColor,
         title: const Text('Eliminar cliente',
             style: TextStyle(color: Colors.white)),
-        content: const Text(
-            '¿Estás seguro de que quieres eliminar este cliente?',
-            style: TextStyle(color: Colors.grey)),
+        content:
+            const Text('¿Estás seguro?', style: TextStyle(color: Colors.grey)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
@@ -89,6 +160,11 @@ class _ClientesScreenState extends State<ClientesScreen> {
   }
 
   void mostrarFormulario() {
+    nombreController.clear();
+    telefonoController.clear();
+    emailController.clear();
+    direccionController.clear();
+
     showModalBottomSheet(
       context: context,
       backgroundColor: cardColor,
@@ -282,11 +358,23 @@ class _ClientesScreenState extends State<ClientesScreen> {
                                               fontSize: 12)),
                                   ],
                                 ),
-                                trailing: IconButton(
-                                  icon: const Icon(Icons.delete_outline,
-                                      color: Colors.red),
-                                  onPressed: () => eliminarCliente(
-                                      int.parse(c['id_cliente'].toString())),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.edit_outlined,
+                                          color: accentColor, size: 20),
+                                      onPressed: () =>
+                                          mostrarFormularioEdicion(c),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete_outline,
+                                          color: Colors.red, size: 20),
+                                      onPressed: () => eliminarCliente(
+                                          int.parse(
+                                              c['id_cliente'].toString())),
+                                    ),
+                                  ],
                                 ),
                               ),
                             );

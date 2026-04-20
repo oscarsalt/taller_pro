@@ -30,26 +30,45 @@ class _DashboardScreenState extends State<DashboardScreen> {
     cargarDatos();
   }
 
-  Future<void> cargarDatos() async {
-    setState(() => cargando = true);
-    try {
-      final s = await ApiService.get('/dashboard');
-      final c = await ApiService.get('/dashboard/semana');
-      setState(() {
-        stats = s is Map ? Map<String, dynamic>.from(s) : {};
-        citasSemana = c is List ? c : [];
-        cargando = false;
-      });
-    } catch (e) {
-      setState(() => cargando = false);
-    }
-  }
-
   DateTime obtenerLunes() {
     final hoy = DateTime.now();
     final diff = hoy.weekday - 1;
     return DateTime(hoy.year, hoy.month, hoy.day - diff)
         .add(Duration(days: semanaOffset * 7));
+  }
+
+  String formatFecha(DateTime d) {
+    return '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> cargarDatos() async {
+    setState(() => cargando = true);
+    try {
+      final s = await ApiService.get('/dashboard');
+      setState(() {
+        stats = s is Map ? Map<String, dynamic>.from(s) : {};
+        cargando = false;
+      });
+    } catch (e) {
+      setState(() => cargando = false);
+    }
+    await cargarSemana();
+  }
+
+  Future<void> cargarSemana() async {
+    try {
+      final lunes = obtenerLunes();
+      final domingo = lunes.add(const Duration(days: 6));
+      final inicio = formatFecha(lunes);
+      final fin = formatFecha(domingo);
+      final c =
+          await ApiService.get('/dashboard/semana?inicio=$inicio&fin=$fin');
+      setState(() {
+        citasSemana = c is List ? c : [];
+      });
+    } catch (e) {
+      setState(() => citasSemana = []);
+    }
   }
 
   List<DateTime> obtenerDiasSemana() {
@@ -58,14 +77,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   List<dynamic> citasDelDia(DateTime fecha) {
-    final fechaStr =
-        '${fecha.year}-${fecha.month.toString().padLeft(2, '0')}-${fecha.day.toString().padLeft(2, '0')}';
+    final fechaStr = formatFecha(fecha);
     return citasSemana.where((c) => c['fecha'] == fechaStr).toList();
   }
 
   double ingresosDelDia(DateTime fecha) {
-    return citasDelDia(fecha)
-        .fold(0.0, (sum, c) => sum + double.tryParse(c['coste'].toString())!);
+    return citasDelDia(fecha).fold(
+        0.0, (sum, c) => sum + (double.tryParse(c['coste'].toString()) ?? 0));
   }
 
   @override
@@ -92,10 +110,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const Text(
                 'Dashboard',
                 style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
 
@@ -150,12 +167,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         const Text('Ingresos totales',
                             style: TextStyle(color: Colors.grey, fontSize: 13)),
                         Text(
-                          '${double.tryParse(stats['ingresos']?.toString() ?? '0')?.toStringAsFixed(2)} €',
+                          '${(double.tryParse(stats['ingresos']?.toString() ?? '0') ?? 0).toStringAsFixed(2)} €',
                           style: const TextStyle(
-                            color: Color(0xFF27AE60),
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
+                              color: Color(0xFF27AE60),
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -178,19 +194,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   const Spacer(),
                   IconButton(
                     icon: const Icon(Icons.chevron_left, color: Colors.white),
-                    onPressed: () => setState(() => semanaOffset--),
+                    onPressed: () {
+                      setState(() => semanaOffset--);
+                      cargarSemana();
+                    },
                   ),
                   if (semanaOffset != 0)
                     TextButton(
-                      onPressed: () => setState(() => semanaOffset = 0),
+                      onPressed: () {
+                        setState(() => semanaOffset = 0);
+                        cargarSemana();
+                      },
                       child: const Text('Hoy',
                           style: TextStyle(color: accentColor)),
                     ),
                   IconButton(
                     icon: const Icon(Icons.chevron_right, color: Colors.white),
-                    onPressed: () => setState(() => semanaOffset++),
+                    onPressed: () {
+                      setState(() => semanaOffset++);
+                      cargarSemana();
+                    },
                   ),
                 ],
+              ),
+
+              // Rango de fechas
+              Text(
+                '${formatFecha(dias.first)} — ${formatFecha(dias.last)}',
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
               ),
 
               const SizedBox(height: 8),
@@ -292,10 +323,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             Text(
                               '${ingresos.toStringAsFixed(2)} €',
                               style: const TextStyle(
-                                color: Color(0xFF27AE60),
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                              ),
+                                  color: Color(0xFF27AE60),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold),
                             ),
                           ]
                         ],

@@ -63,9 +63,117 @@ class _VehiculosScreenState extends State<VehiculosScreen> {
       anioController.clear();
       clienteSeleccionado = null;
       await cargarDatos();
-    } catch (e) {
-      // error
-    }
+    } catch (e) {}
+  }
+
+  void mostrarFormularioEdicion(dynamic vehiculo) {
+    marcaController.text = vehiculo['marca'] ?? '';
+    modeloController.text = vehiculo['modelo'] ?? '';
+    matriculaController.text = vehiculo['matricula'] ?? '';
+    anioController.text = vehiculo['anio']?.toString() ?? '';
+    clienteSeleccionado = vehiculo['id_cliente']?.toString();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: cardColor,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Editar vehículo',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: clienteSeleccionado,
+                dropdownColor: const Color(0xFF333333),
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'Cliente *',
+                  labelStyle: const TextStyle(color: Colors.grey),
+                  prefixIcon:
+                      const Icon(Icons.person_outline, color: Colors.grey),
+                  filled: true,
+                  fillColor: const Color(0xFF333333),
+                  enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Colors.transparent)),
+                  focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: accentColor)),
+                ),
+                items: clientes.map<DropdownMenuItem<String>>((c) {
+                  return DropdownMenuItem<String>(
+                    value: c['id_cliente'].toString(),
+                    child: Text(c['nombre'],
+                        style: const TextStyle(color: Colors.white)),
+                  );
+                }).toList(),
+                onChanged: (v) => setModalState(() => clienteSeleccionado = v),
+              ),
+              const SizedBox(height: 12),
+              _buildInput(
+                  marcaController, 'Marca *', Icons.directions_car_outlined),
+              const SizedBox(height: 12),
+              _buildInput(
+                  modeloController, 'Modelo', Icons.car_repair_outlined),
+              const SizedBox(height: 12),
+              _buildInput(
+                  matriculaController, 'Matrícula *', Icons.pin_outlined),
+              const SizedBox(height: 12),
+              _buildInput(anioController, 'Año', Icons.calendar_today_outlined,
+                  tipo: TextInputType.number),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    await ApiService.put(
+                        '/vehiculos/${vehiculo['id_vehiculo']}', {
+                      'id_cliente': clienteSeleccionado,
+                      'marca': marcaController.text,
+                      'modelo': modeloController.text,
+                      'matricula': matriculaController.text,
+                      'anio': anioController.text,
+                    });
+                    marcaController.clear();
+                    modeloController.clear();
+                    matriculaController.clear();
+                    anioController.clear();
+                    clienteSeleccionado = null;
+                    await cargarDatos();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: accentColor,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: const Text('Guardar cambios',
+                      style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> eliminarVehiculo(int id) async {
@@ -75,9 +183,8 @@ class _VehiculosScreenState extends State<VehiculosScreen> {
         backgroundColor: cardColor,
         title: const Text('Eliminar vehículo',
             style: TextStyle(color: Colors.white)),
-        content: const Text(
-            '¿Estás seguro de que quieres eliminar este vehículo?',
-            style: TextStyle(color: Colors.grey)),
+        content:
+            const Text('¿Estás seguro?', style: TextStyle(color: Colors.grey)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
@@ -96,15 +203,13 @@ class _VehiculosScreenState extends State<VehiculosScreen> {
     }
   }
 
-  String nombreCliente(dynamic idCliente) {
-    final c = clientes.firstWhere(
-      (c) => c['id_cliente'].toString() == idCliente.toString(),
-      orElse: () => null,
-    );
-    return c != null ? c['nombre'] : 'Desconocido';
-  }
-
   void mostrarFormulario() {
+    marcaController.clear();
+    modeloController.clear();
+    matriculaController.clear();
+    anioController.clear();
+    clienteSeleccionado = null;
+
     showModalBottomSheet(
       context: context,
       backgroundColor: cardColor,
@@ -130,7 +235,6 @@ class _VehiculosScreenState extends State<VehiculosScreen> {
                       fontSize: 18,
                       fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
-              // Selector de cliente
               DropdownButtonFormField<String>(
                 value: clienteSeleccionado,
                 dropdownColor: const Color(0xFF333333),
@@ -143,13 +247,11 @@ class _VehiculosScreenState extends State<VehiculosScreen> {
                   filled: true,
                   fillColor: const Color(0xFF333333),
                   enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: Colors.transparent),
-                  ),
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Colors.transparent)),
                   focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: accentColor),
-                  ),
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: accentColor)),
                 ),
                 items: clientes.map<DropdownMenuItem<String>>((c) {
                   return DropdownMenuItem<String>(
@@ -221,6 +323,14 @@ class _VehiculosScreenState extends State<VehiculosScreen> {
         ),
       ),
     );
+  }
+
+  String nombreCliente(dynamic idCliente) {
+    final c = clientes.firstWhere(
+      (c) => c['id_cliente'].toString() == idCliente.toString(),
+      orElse: () => null,
+    );
+    return c != null ? c['nombre'] : 'Desconocido';
   }
 
   List<dynamic> get vehiculosFiltrados {
@@ -330,11 +440,23 @@ class _VehiculosScreenState extends State<VehiculosScreen> {
                                     ),
                                   ],
                                 ),
-                                trailing: IconButton(
-                                  icon: const Icon(Icons.delete_outline,
-                                      color: Colors.red),
-                                  onPressed: () => eliminarVehiculo(
-                                      int.parse(v['id_vehiculo'].toString())),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.edit_outlined,
+                                          color: accentColor, size: 20),
+                                      onPressed: () =>
+                                          mostrarFormularioEdicion(v),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete_outline,
+                                          color: Colors.red, size: 20),
+                                      onPressed: () => eliminarVehiculo(
+                                          int.parse(
+                                              v['id_vehiculo'].toString())),
+                                    ),
+                                  ],
                                 ),
                               ),
                             );
