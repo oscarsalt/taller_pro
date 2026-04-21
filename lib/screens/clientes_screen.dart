@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../api_service.dart';
+import '../theme/app_theme.dart';
 
 class ClientesScreen extends StatefulWidget {
   const ClientesScreen({super.key});
@@ -9,10 +10,6 @@ class ClientesScreen extends StatefulWidget {
 }
 
 class _ClientesScreenState extends State<ClientesScreen> {
-  static const Color bgColor = Color(0xFF1A1A1A);
-  static const Color cardColor = Color(0xFF2A2A2A);
-  static const Color accentColor = Color(0xFFE67E22);
-
   List<dynamic> clientes = [];
   bool cargando = true;
   String busqueda = '';
@@ -43,60 +40,73 @@ class _ClientesScreenState extends State<ClientesScreen> {
 
   Future<void> crearCliente() async {
     if (nombreController.text.isEmpty) return;
-    try {
-      await ApiService.post('/clientes', {
-        'nombre': nombreController.text,
-        'telefono': telefonoController.text,
-        'email': emailController.text,
-        'direccion': direccionController.text,
-      });
-      nombreController.clear();
-      telefonoController.clear();
-      emailController.clear();
-      direccionController.clear();
-      await cargarClientes();
-    } catch (e) {}
+    await ApiService.post('/clientes', {
+      'nombre': nombreController.text,
+      'telefono': telefonoController.text,
+      'email': emailController.text,
+      'direccion': direccionController.text,
+    });
+    _limpiar();
+    await cargarClientes();
   }
 
-  void mostrarFormularioEdicion(dynamic cliente) {
-    nombreController.text = cliente['nombre'] ?? '';
-    telefonoController.text = cliente['telefono'] ?? '';
-    emailController.text = cliente['email'] ?? '';
-    direccionController.text = cliente['direccion'] ?? '';
+  void _limpiar() {
+    nombreController.clear();
+    telefonoController.clear();
+    emailController.clear();
+    direccionController.clear();
+  }
+
+  void _mostrarFormulario({dynamic cliente}) {
+    if (cliente != null) {
+      nombreController.text = cliente['nombre'] ?? '';
+      telefonoController.text = cliente['telefono'] ?? '';
+      emailController.text = cliente['email'] ?? '';
+      direccionController.text = cliente['direccion'] ?? '';
+    } else {
+      _limpiar();
+    }
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: cardColor,
+      backgroundColor: AppTheme.cardColor,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => Padding(
         padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 20,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
-        ),
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Editar cliente',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold)),
+            Text(cliente != null ? 'Editar cliente' : 'Nuevo cliente',
+                style: AppTheme.subtitulo),
             const SizedBox(height: 16),
-            _buildInput(nombreController, 'Nombre *', Icons.person_outline),
+            TextField(
+                controller: nombreController,
+                style: AppTheme.cuerpo,
+                decoration: AppTheme.input('Nombre *', Icons.person_outline)),
             const SizedBox(height: 12),
-            _buildInput(telefonoController, 'Teléfono', Icons.phone_outlined),
+            TextField(
+                controller: telefonoController,
+                style: AppTheme.cuerpo,
+                decoration: AppTheme.input('Teléfono', Icons.phone_outlined)),
             const SizedBox(height: 12),
-            _buildInput(emailController, 'Email', Icons.email_outlined,
-                tipo: TextInputType.emailAddress),
+            TextField(
+                controller: emailController,
+                style: AppTheme.cuerpo,
+                keyboardType: TextInputType.emailAddress,
+                decoration: AppTheme.input('Email', Icons.email_outlined)),
             const SizedBox(height: 12),
-            _buildInput(
-                direccionController, 'Dirección', Icons.location_on_outlined),
+            TextField(
+                controller: direccionController,
+                style: AppTheme.cuerpo,
+                decoration:
+                    AppTheme.input('Dirección', Icons.location_on_outlined)),
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
@@ -104,25 +114,23 @@ class _ClientesScreenState extends State<ClientesScreen> {
               child: ElevatedButton(
                 onPressed: () async {
                   Navigator.pop(ctx);
-                  await ApiService.put('/clientes/${cliente['id_cliente']}', {
-                    'nombre': nombreController.text,
-                    'telefono': telefonoController.text,
-                    'email': emailController.text,
-                    'direccion': direccionController.text,
-                  });
-                  nombreController.clear();
-                  telefonoController.clear();
-                  emailController.clear();
-                  direccionController.clear();
+                  if (cliente != null) {
+                    await ApiService.put('/clientes/${cliente['id_cliente']}', {
+                      'nombre': nombreController.text,
+                      'telefono': telefonoController.text,
+                      'email': emailController.text,
+                      'direccion': direccionController.text,
+                    });
+                  } else {
+                    await crearCliente();
+                  }
+                  _limpiar();
                   await cargarClientes();
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: accentColor,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                ),
-                child: const Text('Guardar cambios',
-                    style: TextStyle(
+                style: AppTheme.botonPrincipal(),
+                child: Text(
+                    cliente != null ? 'Guardar cambios' : 'Crear cliente',
+                    style: const TextStyle(
                         color: Colors.white, fontWeight: FontWeight.bold)),
               ),
             ),
@@ -136,20 +144,17 @@ class _ClientesScreenState extends State<ClientesScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: cardColor,
-        title: const Text('Eliminar cliente',
-            style: TextStyle(color: Colors.white)),
-        content:
-            const Text('¿Estás seguro?', style: TextStyle(color: Colors.grey)),
+        backgroundColor: AppTheme.cardColor,
+        title: Text('Eliminar cliente', style: AppTheme.subtitulo),
+        content: Text('¿Estás seguro?', style: AppTheme.muted),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child:
-                  const Text('Cancelar', style: TextStyle(color: Colors.grey))),
+              child: Text('Cancelar', style: AppTheme.muted)),
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child:
-                  const Text('Eliminar', style: TextStyle(color: Colors.red))),
+              child: Text('Eliminar',
+                  style: TextStyle(color: AppTheme.dangerColor))),
         ],
       ),
     );
@@ -157,95 +162,6 @@ class _ClientesScreenState extends State<ClientesScreen> {
       await ApiService.delete('/clientes/$id');
       await cargarClientes();
     }
-  }
-
-  void mostrarFormulario() {
-    nombreController.clear();
-    telefonoController.clear();
-    emailController.clear();
-    direccionController.clear();
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: cardColor,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 20,
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Nuevo cliente',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            _buildInput(nombreController, 'Nombre *', Icons.person_outline),
-            const SizedBox(height: 12),
-            _buildInput(telefonoController, 'Teléfono', Icons.phone_outlined),
-            const SizedBox(height: 12),
-            _buildInput(emailController, 'Email', Icons.email_outlined,
-                tipo: TextInputType.emailAddress),
-            const SizedBox(height: 12),
-            _buildInput(
-                direccionController, 'Dirección', Icons.location_on_outlined),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  crearCliente();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: accentColor,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                ),
-                child: const Text('Crear cliente',
-                    style: TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInput(
-      TextEditingController controller, String label, IconData icon,
-      {TextInputType tipo = TextInputType.text}) {
-    return TextField(
-      controller: controller,
-      style: const TextStyle(color: Colors.white),
-      keyboardType: tipo,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(color: Colors.grey),
-        prefixIcon: Icon(icon, color: Colors.grey),
-        filled: true,
-        fillColor: const Color(0xFF333333),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Colors.transparent),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: accentColor),
-        ),
-      ),
-    );
   }
 
   List<dynamic> get clientesFiltrados {
@@ -262,10 +178,10 @@ class _ClientesScreenState extends State<ClientesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: AppTheme.bgColor,
       floatingActionButton: FloatingActionButton(
-        onPressed: mostrarFormulario,
-        backgroundColor: accentColor,
+        onPressed: () => _mostrarFormulario(),
+        backgroundColor: AppTheme.accentColor,
         child: const Icon(Icons.add, color: Colors.white),
       ),
       body: Column(
@@ -275,25 +191,20 @@ class _ClientesScreenState extends State<ClientesScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Clientes',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold)),
+                Text('Clientes', style: AppTheme.titulo),
                 const SizedBox(height: 12),
                 TextField(
-                  style: const TextStyle(color: Colors.white),
+                  style: AppTheme.cuerpo,
                   onChanged: (v) => setState(() => busqueda = v),
                   decoration: InputDecoration(
                     hintText: 'Buscar cliente...',
-                    hintStyle: const TextStyle(color: Colors.grey),
+                    hintStyle: AppTheme.muted,
                     prefixIcon: const Icon(Icons.search, color: Colors.grey),
                     filled: true,
-                    fillColor: cardColor,
+                    fillColor: AppTheme.cardColor,
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide.none,
-                    ),
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide.none),
                   ),
                 ),
               ],
@@ -302,14 +213,14 @@ class _ClientesScreenState extends State<ClientesScreen> {
           Expanded(
             child: cargando
                 ? const Center(
-                    child: CircularProgressIndicator(color: accentColor))
+                    child:
+                        CircularProgressIndicator(color: AppTheme.accentColor))
                 : clientesFiltrados.isEmpty
-                    ? const Center(
-                        child: Text('No hay clientes',
-                            style: TextStyle(color: Colors.grey)))
+                    ? Center(
+                        child: Text('No hay clientes', style: AppTheme.muted))
                     : RefreshIndicator(
                         onRefresh: cargarClientes,
-                        color: accentColor,
+                        color: AppTheme.accentColor,
                         child: ListView.builder(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           itemCount: clientesFiltrados.length,
@@ -317,15 +228,13 @@ class _ClientesScreenState extends State<ClientesScreen> {
                             final c = clientesFiltrados[index];
                             return Container(
                               margin: const EdgeInsets.only(bottom: 10),
-                              decoration: BoxDecoration(
-                                color: cardColor,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
+                              decoration: AppTheme.card(),
                               child: ListTile(
                                 contentPadding: const EdgeInsets.symmetric(
                                     horizontal: 16, vertical: 8),
                                 leading: CircleAvatar(
-                                  backgroundColor: accentColor.withOpacity(0.2),
+                                  backgroundColor:
+                                      AppTheme.accentColor.withOpacity(0.2),
                                   child: Text(
                                     c['nombre']
                                             ?.toString()
@@ -333,7 +242,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
                                             .toUpperCase() ??
                                         '?',
                                     style: const TextStyle(
-                                        color: accentColor,
+                                        color: AppTheme.accentColor,
                                         fontWeight: FontWeight.bold),
                                   ),
                                 ),
@@ -347,33 +256,28 @@ class _ClientesScreenState extends State<ClientesScreen> {
                                     if (c['telefono'] != null &&
                                         c['telefono'].toString().isNotEmpty)
                                       Text(c['telefono'],
-                                          style: const TextStyle(
-                                              color: Colors.grey,
-                                              fontSize: 12)),
+                                          style: AppTheme.small),
                                     if (c['email'] != null &&
                                         c['email'].toString().isNotEmpty)
-                                      Text(c['email'],
-                                          style: const TextStyle(
-                                              color: Colors.grey,
-                                              fontSize: 12)),
+                                      Text(c['email'], style: AppTheme.small),
                                   ],
                                 ),
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     IconButton(
-                                      icon: const Icon(Icons.edit_outlined,
-                                          color: accentColor, size: 20),
-                                      onPressed: () =>
-                                          mostrarFormularioEdicion(c),
-                                    ),
+                                        icon: const Icon(Icons.edit_outlined,
+                                            color: AppTheme.accentColor,
+                                            size: 20),
+                                        onPressed: () =>
+                                            _mostrarFormulario(cliente: c)),
                                     IconButton(
-                                      icon: const Icon(Icons.delete_outline,
-                                          color: Colors.red, size: 20),
-                                      onPressed: () => eliminarCliente(
-                                          int.parse(
-                                              c['id_cliente'].toString())),
-                                    ),
+                                        icon: Icon(Icons.delete_outline,
+                                            color: AppTheme.dangerColor,
+                                            size: 20),
+                                        onPressed: () => eliminarCliente(
+                                            int.parse(
+                                                c['id_cliente'].toString()))),
                                   ],
                                 ),
                               ),

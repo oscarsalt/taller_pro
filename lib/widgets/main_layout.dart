@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-import '../screens/citas_screen.dart';
-import '../screens/clientes_screen.dart';
 import '../screens/dashboard_screen.dart';
+import '../screens/clientes_screen.dart';
 import '../screens/vehiculos_screen.dart';
+import '../screens/citas_screen.dart';
+import '../theme/app_theme.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -15,10 +15,6 @@ class MainLayout extends StatefulWidget {
 
 class _MainLayoutState extends State<MainLayout> {
   int _currentIndex = 0;
-
-  static const Color bgColor = Color(0xFF1A1A1A);
-  static const Color accentColor = Color(0xFFE67E22);
-  static const Color sidebarColor = Color(0xFF2C3E50);
 
   final List<_NavItem> _items = const [
     _NavItem(
@@ -43,9 +39,7 @@ class _MainLayoutState extends State<MainLayout> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('token');
     await prefs.remove('user');
-    if (mounted) {
-      Navigator.pushReplacementNamed(context, '/');
-    }
+    if (mounted) Navigator.pushReplacementNamed(context, '/');
   }
 
   Widget _buildCurrentScreen() {
@@ -66,34 +60,32 @@ class _MainLayoutState extends State<MainLayout> {
   Widget _buildSidebarItem(int index) {
     final item = _items[index];
     final isActive = _currentIndex == index;
-
     return GestureDetector(
       onTap: () => setState(() => _currentIndex = index),
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: isActive ? accentColor.withOpacity(0.2) : Colors.transparent,
+          color: isActive
+              ? AppTheme.accentColor.withOpacity(0.2)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
-          border:
-              isActive ? Border.all(color: accentColor.withOpacity(0.4)) : null,
+          border: isActive
+              ? Border.all(color: AppTheme.accentColor.withOpacity(0.4))
+              : null,
         ),
         child: Row(
           children: [
-            Icon(
-              isActive ? item.activeIcon : item.icon,
-              color: isActive ? accentColor : Colors.white60,
-              size: 20,
-            ),
+            Icon(isActive ? item.activeIcon : item.icon,
+                color: isActive ? AppTheme.accentColor : Colors.white60,
+                size: 20),
             const SizedBox(width: 12),
-            Text(
-              item.label,
-              style: TextStyle(
-                color: isActive ? accentColor : Colors.white60,
-                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                fontSize: 14,
-              ),
-            ),
+            Text(item.label,
+                style: TextStyle(
+                  color: isActive ? AppTheme.accentColor : Colors.white60,
+                  fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                  fontSize: 14,
+                )),
           ],
         ),
       ),
@@ -105,7 +97,7 @@ class _MainLayoutState extends State<MainLayout> {
       children: [
         Container(
           width: 220,
-          color: sidebarColor,
+          color: AppTheme.sidebarColor,
           child: Column(
             children: [
               const SizedBox(height: 40),
@@ -113,21 +105,18 @@ class _MainLayoutState extends State<MainLayout> {
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                  color: accentColor.withOpacity(0.15),
+                  color: AppTheme.accentColor.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child:
-                    const Icon(Icons.car_repair, size: 30, color: accentColor),
+                child: const Icon(Icons.car_repair,
+                    size: 30, color: AppTheme.accentColor),
               ),
               const SizedBox(height: 10),
-              const Text(
-                'TallerPro',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              const Text('TallerPro',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold)),
               const SizedBox(height: 32),
               ...List.generate(_items.length, _buildSidebarItem),
               const Spacer(),
@@ -138,17 +127,16 @@ class _MainLayoutState extends State<MainLayout> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
+                    color: AppTheme.dangerColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.logout, color: Colors.red, size: 20),
-                      SizedBox(width: 12),
-                      Text('Cerrar sesión',
-                          style: TextStyle(color: Colors.red, fontSize: 14)),
-                    ],
-                  ),
+                  child: Row(children: [
+                    Icon(Icons.logout, color: AppTheme.dangerColor, size: 20),
+                    const SizedBox(width: 12),
+                    Text('Cerrar sesión',
+                        style: TextStyle(
+                            color: AppTheme.dangerColor, fontSize: 14)),
+                  ]),
                 ),
               ),
               const SizedBox(height: 24),
@@ -164,25 +152,23 @@ class _MainLayoutState extends State<MainLayout> {
     return Column(
       children: [
         Container(
-          color: sidebarColor,
+          color: AppTheme.sidebarColor,
           padding:
               const EdgeInsets.only(top: 48, left: 16, right: 8, bottom: 12),
           child: Row(
             children: [
-              const Icon(Icons.car_repair, color: accentColor, size: 28),
+              const Icon(Icons.car_repair,
+                  color: AppTheme.accentColor, size: 28),
               const SizedBox(width: 10),
-              const Text(
-                'TallerPro',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold),
-              ),
+              const Text('TallerPro',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold)),
               const Spacer(),
               IconButton(
-                icon: const Icon(Icons.logout, color: Colors.white70),
-                onPressed: _logout,
-              ),
+                  icon: const Icon(Icons.logout, color: Colors.white70),
+                  onPressed: _logout),
             ],
           ),
         ),
@@ -194,15 +180,14 @@ class _MainLayoutState extends State<MainLayout> {
   @override
   Widget build(BuildContext context) {
     final isWide = MediaQuery.of(context).size.width > 600;
-
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: AppTheme.bgColor,
       body: isWide ? _buildWideLayout() : _buildNarrowLayout(),
       bottomNavigationBar: isWide
           ? null
           : Container(
               decoration: const BoxDecoration(
-                color: sidebarColor,
+                color: AppTheme.sidebarColor,
                 border: Border(top: BorderSide(color: Colors.white12)),
               ),
               child: BottomNavigationBar(
@@ -210,7 +195,7 @@ class _MainLayoutState extends State<MainLayout> {
                 onTap: (i) => setState(() => _currentIndex = i),
                 backgroundColor: Colors.transparent,
                 elevation: 0,
-                selectedItemColor: accentColor,
+                selectedItemColor: AppTheme.accentColor,
                 unselectedItemColor: Colors.white38,
                 type: BottomNavigationBarType.fixed,
                 items: _items
@@ -230,10 +215,6 @@ class _NavItem {
   final IconData icon;
   final IconData activeIcon;
   final String label;
-
-  const _NavItem({
-    required this.icon,
-    required this.activeIcon,
-    required this.label,
-  });
+  const _NavItem(
+      {required this.icon, required this.activeIcon, required this.label});
 }

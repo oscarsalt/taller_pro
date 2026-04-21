@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import '../api_service.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -17,6 +20,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<dynamic> citasSemana = [];
   bool cargando = true;
   int semanaOffset = 0;
+  String nombreTaller = '';
 
   final Map<String, Color> estadoColores = {
     'pendiente': const Color(0xFFF39C12),
@@ -24,10 +28,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
     'finalizada': const Color(0xFF27AE60),
   };
 
+  final List<String> nombresDias = [
+    'Lun',
+    'Mar',
+    'Mié',
+    'Jue',
+    'Vie',
+    'Sáb',
+    'Dom'
+  ];
+
   @override
   void initState() {
     super.initState();
+    cargarNombre();
     cargarDatos();
+  }
+
+  Future<void> cargarNombre() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userStr = prefs.getString('user');
+    if (userStr != null) {
+      final user = jsonDecode(userStr);
+      setState(() => nombreTaller = user['nombre'] ?? '');
+    }
   }
 
   DateTime obtenerLunes() {
@@ -39,6 +63,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   String formatFecha(DateTime d) {
     return '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+  }
+
+  String formatFechaCorta(DateTime d) {
+    const meses = [
+      'Ene',
+      'Feb',
+      'Mar',
+      'Abr',
+      'May',
+      'Jun',
+      'Jul',
+      'Ago',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dic'
+    ];
+    return '${d.day} ${meses[d.month - 1]}';
   }
 
   Future<void> cargarDatos() async {
@@ -86,6 +128,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
         0.0, (sum, c) => sum + (double.tryParse(c['coste'].toString()) ?? 0));
   }
 
+  double get ingresosSemana {
+    final dias = obtenerDiasSemana();
+    return dias.fold(0.0, (sum, d) => sum + ingresosDelDia(d));
+  }
+
+  String get saludo {
+    final hora = DateTime.now().hour;
+    if (hora < 12) return 'Buenos días';
+    if (hora < 20) return 'Buenas tardes';
+    return 'Buenas noches';
+  }
+
+  String get fechaHoy {
+    final hoy = DateTime.now();
+    const diasSemana = [
+      'Lunes',
+      'Martes',
+      'Miércoles',
+      'Jueves',
+      'Viernes',
+      'Sábado',
+      'Domingo'
+    ];
+    const meses = [
+      'enero',
+      'febrero',
+      'marzo',
+      'abril',
+      'mayo',
+      'junio',
+      'julio',
+      'agosto',
+      'septiembre',
+      'octubre',
+      'noviembre',
+      'diciembre'
+    ];
+    return '${diasSemana[hoy.weekday - 1]}, ${hoy.day} de ${meses[hoy.month - 1]} de ${hoy.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
     if (cargando) {
@@ -94,7 +176,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final dias = obtenerDiasSemana();
     final hoy = DateTime.now();
-    final nombresDias = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -107,79 +188,191 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Dashboard',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-
-              // Tarjetas de estadísticas
-              GridView.count(
-                crossAxisCount: 2,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 1.6,
-                children: [
-                  _buildStatCard(
-                      'Clientes',
-                      stats['clientes']?.toString() ?? '0',
-                      Icons.people,
-                      const Color(0xFF3498DB)),
-                  _buildStatCard(
-                      'Vehículos',
-                      stats['vehiculos']?.toString() ?? '0',
-                      Icons.directions_car,
-                      const Color(0xFF9B59B6)),
-                  _buildStatCard('Citas', stats['citas']?.toString() ?? '0',
-                      Icons.calendar_month, accentColor),
-                  _buildStatCard(
-                      'Citas hoy',
-                      stats['citas_hoy']?.toString() ?? '0',
-                      Icons.today,
-                      const Color(0xFFE74C3C)),
-                ],
-              ),
-
-              const SizedBox(height: 12),
-
-              // Tarjeta de ingresos
+              // Saludo
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF27AE60).withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                      color: const Color(0xFF27AE60).withOpacity(0.3)),
+                  gradient: LinearGradient(
+                    colors: [
+                      accentColor.withOpacity(0.3),
+                      accentColor.withOpacity(0.05)
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: accentColor.withOpacity(0.2)),
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.euro, color: Color(0xFF27AE60), size: 32),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    Text(
+                      '$saludo,',
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 16),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      nombreTaller,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      fechaHoy,
+                      style:
+                          const TextStyle(color: Colors.white54, fontSize: 13),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
                       children: [
-                        const Text('Ingresos totales',
-                            style: TextStyle(color: Colors.grey, fontSize: 13)),
-                        Text(
-                          '${(double.tryParse(stats['ingresos']?.toString() ?? '0') ?? 0).toStringAsFixed(2)} €',
-                          style: const TextStyle(
-                              color: Color(0xFF27AE60),
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold),
-                        ),
+                        _buildMiniStat('Citas hoy',
+                            stats['citas_hoy']?.toString() ?? '0', Icons.today),
+                        const SizedBox(width: 16),
+                        _buildMiniStat(
+                            'Total citas',
+                            stats['citas']?.toString() ?? '0',
+                            Icons.calendar_month),
                       ],
                     ),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
+
+              // Gráfico de ingresos semanales
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: cardColor,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Text(
+                          'Ingresos semanales',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold),
+                        ),
+                        const Spacer(),
+                        Text(
+                          '${ingresosSemana.toStringAsFixed(2)} €',
+                          style: const TextStyle(
+                              color: Color(0xFF27AE60),
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${formatFechaCorta(dias.first)} — ${formatFechaCorta(dias.last)}',
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      height: 180,
+                      child: BarChart(
+                        BarChartData(
+                          alignment: BarChartAlignment.spaceAround,
+                          maxY: () {
+                            final valores =
+                                dias.map((d) => ingresosDelDia(d)).toList();
+                            final maxIngresos =
+                                valores.reduce((a, b) => a > b ? a : b);
+                            return maxIngresos > 0 ? maxIngresos * 1.3 : 100.0;
+                          }(),
+                          barTouchData: BarTouchData(
+                            touchTooltipData: BarTouchTooltipData(
+                              getTooltipItem:
+                                  (group, groupIndex, rod, rodIndex) {
+                                return BarTooltipItem(
+                                  '${rod.toY.toStringAsFixed(2)} €',
+                                  const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12),
+                                );
+                              },
+                            ),
+                          ),
+                          titlesData: FlTitlesData(
+                            leftTitles: const AxisTitles(
+                                sideTitles: SideTitles(showTitles: false)),
+                            rightTitles: const AxisTitles(
+                                sideTitles: SideTitles(showTitles: false)),
+                            topTitles: const AxisTitles(
+                                sideTitles: SideTitles(showTitles: false)),
+                            bottomTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                getTitlesWidget: (value, meta) {
+                                  final index = value.toInt();
+                                  if (index < 0 || index >= 7)
+                                    return const SizedBox();
+                                  final esHoy = dias[index].day == hoy.day &&
+                                      dias[index].month == hoy.month &&
+                                      dias[index].year == hoy.year;
+                                  return Text(
+                                    nombresDias[index],
+                                    style: TextStyle(
+                                      color: esHoy ? accentColor : Colors.grey,
+                                      fontSize: 11,
+                                      fontWeight: esHoy
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          gridData: FlGridData(
+                            show: true,
+                            drawVerticalLine: false,
+                            getDrawingHorizontalLine: (value) => FlLine(
+                              color: Colors.white10,
+                              strokeWidth: 1,
+                            ),
+                          ),
+                          borderData: FlBorderData(show: false),
+                          barGroups: List.generate(7, (i) {
+                            final ingresos = ingresosDelDia(dias[i]);
+                            final esHoy = dias[i].day == hoy.day &&
+                                dias[i].month == hoy.month &&
+                                dias[i].year == hoy.year;
+                            return BarChartGroupData(
+                              x: i,
+                              barRods: [
+                                BarChartRodData(
+                                  toY: ingresos,
+                                  color: esHoy
+                                      ? accentColor
+                                      : accentColor.withOpacity(0.5),
+                                  width: 22,
+                                  borderRadius: const BorderRadius.vertical(
+                                      top: Radius.circular(6)),
+                                ),
+                              ],
+                            );
+                          }),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
 
               // Cabecera del calendario
               Row(
@@ -188,7 +381,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     'Calendario semanal',
                     style: TextStyle(
                         color: Colors.white,
-                        fontSize: 18,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold),
                   ),
                   const Spacer(),
@@ -206,7 +399,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         cargarSemana();
                       },
                       child: const Text('Hoy',
-                          style: TextStyle(color: accentColor)),
+                          style: TextStyle(color: accentColor, fontSize: 12)),
                     ),
                   IconButton(
                     icon: const Icon(Icons.chevron_right, color: Colors.white),
@@ -216,12 +409,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     },
                   ),
                 ],
-              ),
-
-              // Rango de fechas
-              Text(
-                '${formatFecha(dias.first)} — ${formatFecha(dias.last)}',
-                style: const TextStyle(color: Colors.grey, fontSize: 12),
               ),
 
               const SizedBox(height: 8),
@@ -355,41 +542,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildStatCard(
-      String titulo, String valor, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.2)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(titulo,
-                  style: const TextStyle(color: Colors.grey, fontSize: 12)),
-              Text(valor,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold)),
-            ],
-          ),
-        ],
-      ),
+  Widget _buildMiniStat(String label, String valor, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, color: accentColor, size: 16),
+        const SizedBox(width: 6),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label,
+                style: const TextStyle(color: Colors.white54, fontSize: 11)),
+            Text(valor,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ],
     );
   }
 

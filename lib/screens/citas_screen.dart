@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../api_service.dart';
+import '../theme/app_theme.dart';
 
 class CitasScreen extends StatefulWidget {
   const CitasScreen({super.key});
@@ -9,10 +10,6 @@ class CitasScreen extends StatefulWidget {
 }
 
 class _CitasScreenState extends State<CitasScreen> {
-  static const Color bgColor = Color(0xFF1A1A1A);
-  static const Color cardColor = Color(0xFF2A2A2A);
-  static const Color accentColor = Color(0xFFE67E22);
-
   List<dynamic> citas = [];
   List<dynamic> vehiculos = [];
   bool cargando = true;
@@ -29,9 +26,9 @@ class _CitasScreenState extends State<CitasScreen> {
   TimeOfDay? horaSeleccionada;
 
   final Map<String, Color> estadoColores = {
-    'pendiente': const Color(0xFFF39C12),
-    'en_proceso': const Color(0xFF2980B9),
-    'finalizada': const Color(0xFF27AE60),
+    'pendiente': AppTheme.warningColor,
+    'en_proceso': AppTheme.infoColor,
+    'finalizada': AppTheme.successColor,
   };
 
   final Map<String, String> estadoTextos = {
@@ -61,39 +58,7 @@ class _CitasScreenState extends State<CitasScreen> {
     }
   }
 
-  double get totalConIVA {
-    final mo = double.tryParse(manoObraController.text) ?? 0;
-    final pi = double.tryParse(piezasController.text) ?? 0;
-    final ot = double.tryParse(otrosController.text) ?? 0;
-    return (mo + pi + ot) * 1.21;
-  }
-
-  Future<void> crearCita() async {
-    if (vehiculoSeleccionado == null ||
-        fechaSeleccionada == null ||
-        horaSeleccionada == null) return;
-    final fecha =
-        '${fechaSeleccionada!.year}-${fechaSeleccionada!.month.toString().padLeft(2, '0')}-${fechaSeleccionada!.day.toString().padLeft(2, '0')}';
-    final hora =
-        '${horaSeleccionada!.hour.toString().padLeft(2, '0')}:${horaSeleccionada!.minute.toString().padLeft(2, '0')}:00';
-    try {
-      await ApiService.post('/citas', {
-        'id_vehiculo': vehiculoSeleccionado,
-        'id_cliente': clienteSeleccionado,
-        'fecha': fecha,
-        'hora': hora,
-        'estado': 'pendiente',
-        'descripcion': descripcionController.text,
-        'mano_obra': double.tryParse(manoObraController.text) ?? 0,
-        'piezas': double.tryParse(piezasController.text) ?? 0,
-        'otros': double.tryParse(otrosController.text) ?? 0,
-      });
-      _limpiarFormulario();
-      await cargarDatos();
-    } catch (e) {}
-  }
-
-  void _limpiarFormulario() {
+  void _limpiar() {
     descripcionController.clear();
     manoObraController.clear();
     piezasController.clear();
@@ -104,49 +69,84 @@ class _CitasScreenState extends State<CitasScreen> {
     horaSeleccionada = null;
   }
 
-  void mostrarFormularioEdicion(dynamic cita) {
-    descripcionController.text = cita['descripcion'] ?? '';
-    manoObraController.text = cita['mano_obra']?.toString() ?? '0';
-    piezasController.text = cita['piezas']?.toString() ?? '0';
-    otrosController.text = cita['otros']?.toString() ?? '0';
+  double _totalIVA() {
+    final mo = double.tryParse(manoObraController.text) ?? 0;
+    final pi = double.tryParse(piezasController.text) ?? 0;
+    final ot = double.tryParse(otrosController.text) ?? 0;
+    return (mo + pi + ot) * 1.21;
+  }
 
-    final partesFecha = cita['fecha']?.split('-');
-    if (partesFecha != null && partesFecha.length == 3) {
-      fechaSeleccionada = DateTime(int.parse(partesFecha[0]),
-          int.parse(partesFecha[1]), int.parse(partesFecha[2]));
-    }
-
-    final partesHora = cita['hora']?.split(':');
-    if (partesHora != null && partesHora.length >= 2) {
-      horaSeleccionada = TimeOfDay(
-          hour: int.parse(partesHora[0]), minute: int.parse(partesHora[1]));
+  void _mostrarFormulario({dynamic cita}) {
+    if (cita != null) {
+      descripcionController.text = cita['descripcion'] ?? '';
+      manoObraController.text = cita['mano_obra']?.toString() ?? '0';
+      piezasController.text = cita['piezas']?.toString() ?? '0';
+      otrosController.text = cita['otros']?.toString() ?? '0';
+      final partesFecha = cita['fecha']?.split('-');
+      if (partesFecha != null && partesFecha.length == 3) {
+        fechaSeleccionada = DateTime(int.parse(partesFecha[0]),
+            int.parse(partesFecha[1]), int.parse(partesFecha[2]));
+      }
+      final partesHora = cita['hora']?.split(':');
+      if (partesHora != null && partesHora.length >= 2) {
+        horaSeleccionada = TimeOfDay(
+            hour: int.parse(partesHora[0]), minute: int.parse(partesHora[1]));
+      }
+    } else {
+      _limpiar();
     }
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: cardColor,
+      backgroundColor: AppTheme.cardColor,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) => SingleChildScrollView(
           padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
-          ),
+              left: 20,
+              right: 20,
+              top: 20,
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Editar cita',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold)),
+              Text(cita != null ? 'Editar cita' : 'Nueva cita',
+                  style: AppTheme.subtitulo),
               const SizedBox(height: 16),
+
+              if (cita == null) ...[
+                DropdownButtonFormField<String>(
+                  value: vehiculoSeleccionado,
+                  dropdownColor: AppTheme.inputColor,
+                  style: AppTheme.cuerpo,
+                  decoration: AppTheme.input(
+                      'Vehículo *', Icons.directions_car_outlined),
+                  items: vehiculos
+                      .map<DropdownMenuItem<String>>((v) => DropdownMenuItem(
+                            value: v['id_vehiculo'].toString(),
+                            child: Text(
+                                '${v['marca']} ${v['modelo']} - ${v['matricula']}',
+                                style: AppTheme.cuerpo),
+                          ))
+                      .toList(),
+                  onChanged: (v) {
+                    setModalState(() {
+                      vehiculoSeleccionado = v;
+                      final veh = vehiculos.firstWhere(
+                          (veh) => veh['id_vehiculo'].toString() == v,
+                          orElse: () => null);
+                      if (veh != null)
+                        clienteSeleccionado = veh['id_cliente'].toString();
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
+              ],
+
+              // Selector fecha
               GestureDetector(
                 onTap: () async {
                   final fecha = await showDatePicker(
@@ -156,8 +156,8 @@ class _CitasScreenState extends State<CitasScreen> {
                     lastDate: DateTime.now().add(const Duration(days: 365)),
                     builder: (ctx, child) => Theme(
                       data: ThemeData.dark().copyWith(
-                          colorScheme:
-                              const ColorScheme.dark(primary: accentColor)),
+                          colorScheme: const ColorScheme.dark(
+                              primary: AppTheme.accentColor)),
                       child: child!,
                     ),
                   );
@@ -168,27 +168,27 @@ class _CitasScreenState extends State<CitasScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
                   decoration: BoxDecoration(
-                      color: const Color(0xFF333333),
+                      color: AppTheme.inputColor,
                       borderRadius: BorderRadius.circular(10)),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.calendar_today_outlined,
-                          color: Colors.grey, size: 20),
-                      const SizedBox(width: 12),
-                      Text(
-                        fechaSeleccionada != null
-                            ? '${fechaSeleccionada!.day}/${fechaSeleccionada!.month}/${fechaSeleccionada!.year}'
-                            : 'Seleccionar fecha',
-                        style: TextStyle(
-                            color: fechaSeleccionada != null
-                                ? Colors.white
-                                : Colors.grey),
-                      ),
-                    ],
-                  ),
+                  child: Row(children: [
+                    const Icon(Icons.calendar_today_outlined,
+                        color: Colors.grey, size: 20),
+                    const SizedBox(width: 12),
+                    Text(
+                      fechaSeleccionada != null
+                          ? '${fechaSeleccionada!.day}/${fechaSeleccionada!.month}/${fechaSeleccionada!.year}'
+                          : 'Seleccionar fecha *',
+                      style: TextStyle(
+                          color: fechaSeleccionada != null
+                              ? Colors.white
+                              : Colors.grey),
+                    ),
+                  ]),
                 ),
               ),
               const SizedBox(height: 12),
+
+              // Selector hora
               GestureDetector(
                 onTap: () async {
                   final hora = await showTimePicker(
@@ -196,8 +196,8 @@ class _CitasScreenState extends State<CitasScreen> {
                     initialTime: horaSeleccionada ?? TimeOfDay.now(),
                     builder: (ctx, child) => Theme(
                       data: ThemeData.dark().copyWith(
-                          colorScheme:
-                              const ColorScheme.dark(primary: accentColor)),
+                          colorScheme: const ColorScheme.dark(
+                              primary: AppTheme.accentColor)),
                       child: child!,
                     ),
                   );
@@ -208,55 +208,66 @@ class _CitasScreenState extends State<CitasScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
                   decoration: BoxDecoration(
-                      color: const Color(0xFF333333),
+                      color: AppTheme.inputColor,
                       borderRadius: BorderRadius.circular(10)),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.access_time_outlined,
-                          color: Colors.grey, size: 20),
-                      const SizedBox(width: 12),
-                      Text(
-                        horaSeleccionada != null
-                            ? '${horaSeleccionada!.hour.toString().padLeft(2, '0')}:${horaSeleccionada!.minute.toString().padLeft(2, '0')}'
-                            : 'Seleccionar hora',
-                        style: TextStyle(
-                            color: horaSeleccionada != null
-                                ? Colors.white
-                                : Colors.grey),
-                      ),
-                    ],
-                  ),
+                  child: Row(children: [
+                    const Icon(Icons.access_time_outlined,
+                        color: Colors.grey, size: 20),
+                    const SizedBox(width: 12),
+                    Text(
+                      horaSeleccionada != null
+                          ? '${horaSeleccionada!.hour.toString().padLeft(2, '0')}:${horaSeleccionada!.minute.toString().padLeft(2, '0')}'
+                          : 'Seleccionar hora *',
+                      style: TextStyle(
+                          color: horaSeleccionada != null
+                              ? Colors.white
+                              : Colors.grey),
+                    ),
+                  ]),
                 ),
               ),
               const SizedBox(height: 12),
-              _buildInput(descripcionController, 'Descripción',
-                  Icons.description_outlined),
+
+              TextField(
+                  controller: descripcionController,
+                  style: AppTheme.cuerpo,
+                  decoration: AppTheme.input(
+                      'Descripción', Icons.description_outlined)),
               const SizedBox(height: 12),
-              const Text('Desglose de costes',
-                  style: TextStyle(color: Colors.grey, fontSize: 13)),
+              Text('Desglose de costes', style: AppTheme.muted),
               const SizedBox(height: 8),
-              _buildInput(
-                  manoObraController, 'Mano de obra (€)', Icons.build_outlined,
-                  tipo: TextInputType.number,
-                  onChanged: () => setModalState(() {})),
+              TextField(
+                  controller: manoObraController,
+                  style: AppTheme.cuerpo,
+                  keyboardType: TextInputType.number,
+                  onChanged: (_) => setModalState(() {}),
+                  decoration:
+                      AppTheme.input('Mano de obra (€)', Icons.build_outlined)),
               const SizedBox(height: 8),
-              _buildInput(piezasController, 'Piezas / Recambios (€)',
-                  Icons.inventory_2_outlined,
-                  tipo: TextInputType.number,
-                  onChanged: () => setModalState(() {})),
+              TextField(
+                  controller: piezasController,
+                  style: AppTheme.cuerpo,
+                  keyboardType: TextInputType.number,
+                  onChanged: (_) => setModalState(() {}),
+                  decoration: AppTheme.input(
+                      'Piezas / Recambios (€)', Icons.inventory_2_outlined)),
               const SizedBox(height: 8),
-              _buildInput(otrosController, 'Otros conceptos (€)',
-                  Icons.add_circle_outline,
-                  tipo: TextInputType.number,
-                  onChanged: () => setModalState(() {})),
+              TextField(
+                  controller: otrosController,
+                  style: AppTheme.cuerpo,
+                  keyboardType: TextInputType.number,
+                  onChanged: (_) => setModalState(() {}),
+                  decoration: AppTheme.input(
+                      'Otros conceptos (€)', Icons.add_circle_outline)),
               const SizedBox(height: 8),
+
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF27AE60).withOpacity(0.1),
+                  color: AppTheme.successColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                      color: const Color(0xFF27AE60).withOpacity(0.3)),
+                  border:
+                      Border.all(color: AppTheme.successColor.withOpacity(0.3)),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -264,15 +275,16 @@ class _CitasScreenState extends State<CitasScreen> {
                     const Text('Total con IVA (21%):',
                         style: TextStyle(
                             color: Colors.white, fontWeight: FontWeight.bold)),
-                    Text('${totalConIVA.toStringAsFixed(2)} €',
-                        style: const TextStyle(
-                            color: Color(0xFF27AE60),
+                    Text('${_totalIVA().toStringAsFixed(2)} €',
+                        style: TextStyle(
+                            color: AppTheme.successColor,
                             fontWeight: FontWeight.bold,
                             fontSize: 16)),
                   ],
                 ),
               ),
               const SizedBox(height: 20),
+
               SizedBox(
                 width: double.infinity,
                 height: 48,
@@ -285,7 +297,7 @@ class _CitasScreenState extends State<CitasScreen> {
                         '${fechaSeleccionada!.year}-${fechaSeleccionada!.month.toString().padLeft(2, '0')}-${fechaSeleccionada!.day.toString().padLeft(2, '0')}';
                     final hora =
                         '${horaSeleccionada!.hour.toString().padLeft(2, '0')}:${horaSeleccionada!.minute.toString().padLeft(2, '0')}:00';
-                    await ApiService.put('/citas/${cita['id_cita']}', {
+                    final data = {
                       'fecha': fecha,
                       'hora': hora,
                       'descripcion': descripcionController.text,
@@ -293,17 +305,23 @@ class _CitasScreenState extends State<CitasScreen> {
                           double.tryParse(manoObraController.text) ?? 0,
                       'piezas': double.tryParse(piezasController.text) ?? 0,
                       'otros': double.tryParse(otrosController.text) ?? 0,
-                    });
-                    _limpiarFormulario();
+                    };
+                    if (cita != null) {
+                      await ApiService.put('/citas/${cita['id_cita']}', data);
+                    } else {
+                      await ApiService.post('/citas', {
+                        ...data,
+                        'id_vehiculo': vehiculoSeleccionado,
+                        'id_cliente': clienteSeleccionado,
+                        'estado': 'pendiente'
+                      });
+                    }
+                    _limpiar();
                     await cargarDatos();
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: accentColor,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                  ),
-                  child: const Text('Guardar cambios',
-                      style: TextStyle(
+                  style: AppTheme.botonPrincipal(),
+                  child: Text(cita != null ? 'Guardar cambios' : 'Crear cita',
+                      style: const TextStyle(
                           color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
               ),
@@ -318,20 +336,17 @@ class _CitasScreenState extends State<CitasScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: cardColor,
-        title:
-            const Text('Eliminar cita', style: TextStyle(color: Colors.white)),
-        content:
-            const Text('¿Estás seguro?', style: TextStyle(color: Colors.grey)),
+        backgroundColor: AppTheme.cardColor,
+        title: Text('Eliminar cita', style: AppTheme.subtitulo),
+        content: Text('¿Estás seguro?', style: AppTheme.muted),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child:
-                  const Text('Cancelar', style: TextStyle(color: Colors.grey))),
+              child: Text('Cancelar', style: AppTheme.muted)),
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child:
-                  const Text('Eliminar', style: TextStyle(color: Colors.red))),
+              child: Text('Eliminar',
+                  style: TextStyle(color: AppTheme.dangerColor))),
         ],
       ),
     );
@@ -344,248 +359,6 @@ class _CitasScreenState extends State<CitasScreen> {
   Future<void> actualizarEstado(int id, String nuevoEstado) async {
     await ApiService.post('/citas/update/$id', {'estado': nuevoEstado});
     await cargarDatos();
-  }
-
-  void mostrarFormulario() {
-    _limpiarFormulario();
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: cardColor,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModalState) => SingleChildScrollView(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Nueva cita',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                value: vehiculoSeleccionado,
-                dropdownColor: const Color(0xFF333333),
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  labelText: 'Vehículo *',
-                  labelStyle: const TextStyle(color: Colors.grey),
-                  prefixIcon: const Icon(Icons.directions_car_outlined,
-                      color: Colors.grey),
-                  filled: true,
-                  fillColor: const Color(0xFF333333),
-                  enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: Colors.transparent)),
-                  focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: accentColor)),
-                ),
-                items: vehiculos.map<DropdownMenuItem<String>>((v) {
-                  return DropdownMenuItem<String>(
-                    value: v['id_vehiculo'].toString(),
-                    child: Text(
-                        '${v['marca']} ${v['modelo']} - ${v['matricula']}',
-                        style: const TextStyle(color: Colors.white)),
-                  );
-                }).toList(),
-                onChanged: (v) {
-                  setModalState(() {
-                    vehiculoSeleccionado = v;
-                    final veh = vehiculos.firstWhere(
-                        (veh) => veh['id_vehiculo'].toString() == v,
-                        orElse: () => null);
-                    if (veh != null)
-                      clienteSeleccionado = veh['id_cliente'].toString();
-                  });
-                },
-              ),
-              const SizedBox(height: 12),
-              GestureDetector(
-                onTap: () async {
-                  final fecha = await showDatePicker(
-                    context: ctx,
-                    initialDate: DateTime.now(),
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime.now().add(const Duration(days: 365)),
-                    builder: (ctx, child) => Theme(
-                      data: ThemeData.dark().copyWith(
-                          colorScheme:
-                              const ColorScheme.dark(primary: accentColor)),
-                      child: child!,
-                    ),
-                  );
-                  if (fecha != null)
-                    setModalState(() => fechaSeleccionada = fecha);
-                },
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                  decoration: BoxDecoration(
-                      color: const Color(0xFF333333),
-                      borderRadius: BorderRadius.circular(10)),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.calendar_today_outlined,
-                          color: Colors.grey, size: 20),
-                      const SizedBox(width: 12),
-                      Text(
-                        fechaSeleccionada != null
-                            ? '${fechaSeleccionada!.day}/${fechaSeleccionada!.month}/${fechaSeleccionada!.year}'
-                            : 'Seleccionar fecha *',
-                        style: TextStyle(
-                            color: fechaSeleccionada != null
-                                ? Colors.white
-                                : Colors.grey),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              GestureDetector(
-                onTap: () async {
-                  final hora = await showTimePicker(
-                    context: ctx,
-                    initialTime: TimeOfDay.now(),
-                    builder: (ctx, child) => Theme(
-                      data: ThemeData.dark().copyWith(
-                          colorScheme:
-                              const ColorScheme.dark(primary: accentColor)),
-                      child: child!,
-                    ),
-                  );
-                  if (hora != null)
-                    setModalState(() => horaSeleccionada = hora);
-                },
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                  decoration: BoxDecoration(
-                      color: const Color(0xFF333333),
-                      borderRadius: BorderRadius.circular(10)),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.access_time_outlined,
-                          color: Colors.grey, size: 20),
-                      const SizedBox(width: 12),
-                      Text(
-                        horaSeleccionada != null
-                            ? '${horaSeleccionada!.hour.toString().padLeft(2, '0')}:${horaSeleccionada!.minute.toString().padLeft(2, '0')}'
-                            : 'Seleccionar hora *',
-                        style: TextStyle(
-                            color: horaSeleccionada != null
-                                ? Colors.white
-                                : Colors.grey),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              _buildInput(descripcionController, 'Descripción',
-                  Icons.description_outlined),
-              const SizedBox(height: 12),
-              const Text('Desglose de costes',
-                  style: TextStyle(color: Colors.grey, fontSize: 13)),
-              const SizedBox(height: 8),
-              _buildInput(
-                  manoObraController, 'Mano de obra (€)', Icons.build_outlined,
-                  tipo: TextInputType.number,
-                  onChanged: () => setModalState(() {})),
-              const SizedBox(height: 8),
-              _buildInput(piezasController, 'Piezas / Recambios (€)',
-                  Icons.inventory_2_outlined,
-                  tipo: TextInputType.number,
-                  onChanged: () => setModalState(() {})),
-              const SizedBox(height: 8),
-              _buildInput(otrosController, 'Otros conceptos (€)',
-                  Icons.add_circle_outline,
-                  tipo: TextInputType.number,
-                  onChanged: () => setModalState(() {})),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF27AE60).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                      color: const Color(0xFF27AE60).withOpacity(0.3)),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Total con IVA (21%):',
-                        style: TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.bold)),
-                    Text('${totalConIVA.toStringAsFixed(2)} €',
-                        style: const TextStyle(
-                            color: Color(0xFF27AE60),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16)),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    crearCita();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: accentColor,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                  ),
-                  child: const Text('Crear cita',
-                      style: TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.bold)),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInput(
-      TextEditingController controller, String label, IconData icon,
-      {TextInputType tipo = TextInputType.text, VoidCallback? onChanged}) {
-    return TextField(
-      controller: controller,
-      style: const TextStyle(color: Colors.white),
-      keyboardType: tipo,
-      onChanged: onChanged != null ? (_) => onChanged() : null,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(color: Colors.grey),
-        prefixIcon: Icon(icon, color: Colors.grey),
-        filled: true,
-        fillColor: const Color(0xFF333333),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Colors.transparent),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: accentColor),
-        ),
-      ),
-    );
   }
 
   List<dynamic> get citasFiltradas {
@@ -605,10 +378,10 @@ class _CitasScreenState extends State<CitasScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: AppTheme.bgColor,
       floatingActionButton: FloatingActionButton(
-        onPressed: mostrarFormulario,
-        backgroundColor: accentColor,
+        onPressed: () => _mostrarFormulario(),
+        backgroundColor: AppTheme.accentColor,
         child: const Icon(Icons.add, color: Colors.white),
       ),
       body: Column(
@@ -618,25 +391,20 @@ class _CitasScreenState extends State<CitasScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Citas',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold)),
+                Text('Citas', style: AppTheme.titulo),
                 const SizedBox(height: 12),
                 TextField(
-                  style: const TextStyle(color: Colors.white),
+                  style: AppTheme.cuerpo,
                   onChanged: (v) => setState(() => busqueda = v),
                   decoration: InputDecoration(
                     hintText: 'Buscar por cliente, vehículo, estado...',
-                    hintStyle: const TextStyle(color: Colors.grey),
+                    hintStyle: AppTheme.muted,
                     prefixIcon: const Icon(Icons.search, color: Colors.grey),
                     filled: true,
-                    fillColor: cardColor,
+                    fillColor: AppTheme.cardColor,
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide.none,
-                    ),
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide.none),
                   ),
                 ),
               ],
@@ -645,14 +413,13 @@ class _CitasScreenState extends State<CitasScreen> {
           Expanded(
             child: cargando
                 ? const Center(
-                    child: CircularProgressIndicator(color: accentColor))
+                    child:
+                        CircularProgressIndicator(color: AppTheme.accentColor))
                 : citasFiltradas.isEmpty
-                    ? const Center(
-                        child: Text('No hay citas',
-                            style: TextStyle(color: Colors.grey)))
+                    ? Center(child: Text('No hay citas', style: AppTheme.muted))
                     : RefreshIndicator(
                         onRefresh: cargarDatos,
-                        color: accentColor,
+                        color: AppTheme.accentColor,
                         child: ListView.builder(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           itemCount: citasFiltradas.length,
@@ -665,12 +432,8 @@ class _CitasScreenState extends State<CitasScreen> {
 
                             return Container(
                               margin: const EdgeInsets.only(bottom: 10),
-                              decoration: BoxDecoration(
-                                color: cardColor,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                    color: estadoColor.withOpacity(0.2)),
-                              ),
+                              decoration:
+                                  AppTheme.card(borderColor: estadoColor),
                               child: Padding(
                                 padding: const EdgeInsets.all(14),
                                 child: Column(
@@ -679,22 +442,20 @@ class _CitasScreenState extends State<CitasScreen> {
                                     Row(
                                       children: [
                                         Expanded(
-                                          child: Text(
-                                            '${c['marca']} ${c['modelo']} - ${c['matricula']}',
-                                            style: const TextStyle(
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.bold),
-                                          ),
-                                        ),
+                                            child: Text(
+                                                '${c['marca']} ${c['modelo']} - ${c['matricula']}',
+                                                style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontWeight:
+                                                        FontWeight.bold))),
                                         Container(
                                           padding: const EdgeInsets.symmetric(
                                               horizontal: 8, vertical: 4),
                                           decoration: BoxDecoration(
-                                            color:
-                                                estadoColor.withOpacity(0.15),
-                                            borderRadius:
-                                                BorderRadius.circular(6),
-                                          ),
+                                              color:
+                                                  estadoColor.withOpacity(0.15),
+                                              borderRadius:
+                                                  BorderRadius.circular(6)),
                                           child: Text(estadoTexto,
                                               style: TextStyle(
                                                   color: estadoColor,
@@ -705,69 +466,55 @@ class _CitasScreenState extends State<CitasScreen> {
                                     ),
                                     const SizedBox(height: 6),
                                     Text(c['nombre'] ?? '',
-                                        style: const TextStyle(
-                                            color: Colors.grey, fontSize: 13)),
+                                        style: AppTheme.muted),
                                     const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        const Icon(
-                                            Icons.calendar_today_outlined,
-                                            color: Colors.grey,
-                                            size: 13),
-                                        const SizedBox(width: 4),
-                                        Text(c['fecha'] ?? '',
-                                            style: const TextStyle(
-                                                color: Colors.grey,
-                                                fontSize: 12)),
-                                        const SizedBox(width: 12),
-                                        const Icon(Icons.access_time_outlined,
-                                            color: Colors.grey, size: 13),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                            c['hora']
-                                                    ?.toString()
-                                                    .substring(0, 5) ??
-                                                '',
-                                            style: const TextStyle(
-                                                color: Colors.grey,
-                                                fontSize: 12)),
-                                      ],
-                                    ),
+                                    Row(children: [
+                                      const Icon(Icons.calendar_today_outlined,
+                                          color: Colors.grey, size: 13),
+                                      const SizedBox(width: 4),
+                                      Text(c['fecha'] ?? '',
+                                          style: AppTheme.small),
+                                      const SizedBox(width: 12),
+                                      const Icon(Icons.access_time_outlined,
+                                          color: Colors.grey, size: 13),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                          c['hora']
+                                                  ?.toString()
+                                                  .substring(0, 5) ??
+                                              '',
+                                          style: AppTheme.small),
+                                    ]),
                                     if (c['descripcion'] != null &&
                                         c['descripcion']
                                             .toString()
                                             .isNotEmpty) ...[
                                       const SizedBox(height: 4),
                                       Text(c['descripcion'],
-                                          style: const TextStyle(
-                                              color: Colors.grey,
-                                              fontSize: 12)),
+                                          style: AppTheme.small),
                                     ],
                                     const SizedBox(height: 8),
-                                    Row(
-                                      children: [
-                                        Text(
+                                    Row(children: [
+                                      Text(
                                           '${double.tryParse(c['coste'].toString())?.toStringAsFixed(2)} €',
-                                          style: const TextStyle(
-                                              color: Color(0xFF27AE60),
-                                              fontWeight: FontWeight.bold),
-                                        ),
-                                        const Spacer(),
-                                        PopupMenuButton<String>(
-                                          color: const Color(0xFF333333),
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 10, vertical: 6),
-                                            decoration: BoxDecoration(
-                                              color:
-                                                  estadoColor.withOpacity(0.1),
-                                              borderRadius:
-                                                  BorderRadius.circular(6),
-                                              border: Border.all(
-                                                  color: estadoColor
-                                                      .withOpacity(0.3)),
-                                            ),
-                                            child: Row(
+                                          style: TextStyle(
+                                              color: AppTheme.successColor,
+                                              fontWeight: FontWeight.bold)),
+                                      const Spacer(),
+                                      PopupMenuButton<String>(
+                                        color: AppTheme.inputColor,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 10, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: estadoColor.withOpacity(0.1),
+                                            borderRadius:
+                                                BorderRadius.circular(6),
+                                            border: Border.all(
+                                                color: estadoColor
+                                                    .withOpacity(0.3)),
+                                          ),
+                                          child: Row(
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
                                                 Text('Estado',
@@ -778,56 +525,55 @@ class _CitasScreenState extends State<CitasScreen> {
                                                 Icon(Icons.arrow_drop_down,
                                                     color: estadoColor,
                                                     size: 16),
-                                              ],
-                                            ),
-                                          ),
-                                          itemBuilder: (ctx) => [
-                                            const PopupMenuItem(
-                                                value: 'pendiente',
-                                                child: Text('Pendiente',
-                                                    style: TextStyle(
-                                                        color: Color(
-                                                            0xFFF39C12)))),
-                                            const PopupMenuItem(
-                                                value: 'en_proceso',
-                                                child: Text('En proceso',
-                                                    style: TextStyle(
-                                                        color: Color(
-                                                            0xFF2980B9)))),
-                                            const PopupMenuItem(
-                                                value: 'finalizada',
-                                                child: Text('Finalizada',
-                                                    style: TextStyle(
-                                                        color: Color(
-                                                            0xFF27AE60)))),
-                                          ],
-                                          onSelected: (nuevoEstado) =>
-                                              actualizarEstado(
-                                                  int.parse(
-                                                      c['id_cita'].toString()),
-                                                  nuevoEstado),
+                                              ]),
                                         ),
-                                        const SizedBox(width: 4),
-                                        IconButton(
-                                          icon: const Icon(Icons.edit_outlined,
-                                              color: accentColor, size: 20),
-                                          onPressed: () =>
-                                              mostrarFormularioEdicion(c),
-                                          padding: EdgeInsets.zero,
-                                          constraints: const BoxConstraints(),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        IconButton(
-                                          icon: const Icon(Icons.delete_outline,
-                                              color: Colors.red, size: 20),
-                                          onPressed: () => eliminarCita(
-                                              int.parse(
-                                                  c['id_cita'].toString())),
-                                          padding: EdgeInsets.zero,
-                                          constraints: const BoxConstraints(),
-                                        ),
-                                      ],
-                                    ),
+                                        itemBuilder: (ctx) => [
+                                          PopupMenuItem(
+                                              value: 'pendiente',
+                                              child: Text('Pendiente',
+                                                  style: TextStyle(
+                                                      color: AppTheme
+                                                          .warningColor))),
+                                          PopupMenuItem(
+                                              value: 'en_proceso',
+                                              child: Text('En proceso',
+                                                  style: TextStyle(
+                                                      color:
+                                                          AppTheme.infoColor))),
+                                          PopupMenuItem(
+                                              value: 'finalizada',
+                                              child: Text('Finalizada',
+                                                  style: TextStyle(
+                                                      color: AppTheme
+                                                          .successColor))),
+                                        ],
+                                        onSelected: (nuevoEstado) =>
+                                            actualizarEstado(
+                                                int.parse(
+                                                    c['id_cita'].toString()),
+                                                nuevoEstado),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      IconButton(
+                                        icon: const Icon(Icons.edit_outlined,
+                                            color: AppTheme.accentColor,
+                                            size: 20),
+                                        onPressed: () =>
+                                            _mostrarFormulario(cita: c),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      IconButton(
+                                        icon: Icon(Icons.delete_outline,
+                                            color: AppTheme.dangerColor,
+                                            size: 20),
+                                        onPressed: () => eliminarCita(
+                                            int.parse(c['id_cita'].toString())),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                      ),
+                                    ]),
                                   ],
                                 ),
                               ),
