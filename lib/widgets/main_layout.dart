@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../screens/busqueda_screen.dart';
 import '../screens/dashboard_screen.dart';
 import '../screens/clientes_screen.dart';
 import '../screens/perfil_screen.dart';
@@ -34,6 +35,8 @@ class _MainLayoutState extends State<MainLayout> {
         icon: Icons.calendar_month_outlined,
         activeIcon: Icons.calendar_month,
         label: 'Citas'),
+    _NavItem(
+        icon: Icons.search_outlined, activeIcon: Icons.search, label: 'Buscar'),
   ];
 
   Future<void> _logout() async {
@@ -58,6 +61,8 @@ class _MainLayoutState extends State<MainLayout> {
         return const VehiculosScreen();
       case 3:
         return const CitasScreen();
+      case 4:
+        return const BusquedaScreen();
       default:
         return const DashboardScreen();
     }
@@ -126,7 +131,6 @@ class _MainLayoutState extends State<MainLayout> {
               const SizedBox(height: 32),
               ...List.generate(_items.length, _buildSidebarItem),
               const Spacer(),
-              // Perfil
               GestureDetector(
                 onTap: _abrirPerfil,
                 child: Container(
@@ -146,7 +150,6 @@ class _MainLayoutState extends State<MainLayout> {
                 ),
               ),
               const SizedBox(height: 8),
-              // Logout
               GestureDetector(
                 onTap: _logout,
                 child: Container(
