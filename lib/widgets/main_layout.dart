@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../screens/dashboard_screen.dart';
 import '../screens/clientes_screen.dart';
+import '../screens/perfil_screen.dart';
 import '../screens/vehiculos_screen.dart';
 import '../screens/citas_screen.dart';
 import '../theme/app_theme.dart';
@@ -40,6 +41,11 @@ class _MainLayoutState extends State<MainLayout> {
     await prefs.remove('token');
     await prefs.remove('user');
     if (mounted) Navigator.pushReplacementNamed(context, '/');
+  }
+
+  void _abrirPerfil() {
+    Navigator.push(
+        context, MaterialPageRoute(builder: (_) => const PerfilScreen()));
   }
 
   Widget _buildCurrentScreen() {
@@ -120,6 +126,27 @@ class _MainLayoutState extends State<MainLayout> {
               const SizedBox(height: 32),
               ...List.generate(_items.length, _buildSidebarItem),
               const Spacer(),
+              // Perfil
+              GestureDetector(
+                onTap: _abrirPerfil,
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Row(children: [
+                    Icon(Icons.person_outline, color: Colors.white60, size: 20),
+                    SizedBox(width: 12),
+                    Text('Mi perfil',
+                        style: TextStyle(color: Colors.white60, fontSize: 14)),
+                  ]),
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Logout
               GestureDetector(
                 onTap: _logout,
                 child: Container(
@@ -167,8 +194,14 @@ class _MainLayoutState extends State<MainLayout> {
                       fontWeight: FontWeight.bold)),
               const Spacer(),
               IconButton(
-                  icon: const Icon(Icons.logout, color: Colors.white70),
-                  onPressed: _logout),
+                icon: const Icon(Icons.person_outline, color: Colors.white70),
+                onPressed: _abrirPerfil,
+                tooltip: 'Mi perfil',
+              ),
+              IconButton(
+                icon: const Icon(Icons.logout, color: Colors.white70),
+                onPressed: _logout,
+              ),
             ],
           ),
         ),
