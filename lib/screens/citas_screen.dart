@@ -138,8 +138,9 @@ class _CitasScreenState extends State<CitasScreen> {
                       final veh = vehiculos.firstWhere(
                           (veh) => veh['id_vehiculo'].toString() == v,
                           orElse: () => null);
-                      if (veh != null)
+                      if (veh != null) {
                         clienteSeleccionado = veh['id_cliente'].toString();
+                      }
                     });
                   },
                 ),

@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ApiService {
   // static const String baseUrl = 'http://10.0.2.2/taller-manager/api/index.php';
   //static const String baseUrl = 'http://localhost/taller-manager/api/index.php';
+
   static String get baseUrl {
     if (kIsWeb) {
       return 'http://localhost/taller-manager/api/index.php';
@@ -13,6 +14,14 @@ class ApiService {
       return 'http://192.168.1.35/taller-manager/api/index.php'; // tu IP aquí
     }
   }
+/*
+  static String get baseUrl {
+    if (kIsWeb) {
+      return 'https://b1l3vyrx.infinityfree.com/api/index.php';
+    } else {
+      return 'https://b1l3vyrx.infinityfree.com/api/index.php';
+    }
+  }*/
 
   // Obtener el token guardado
   static Future<String?> getToken() async {

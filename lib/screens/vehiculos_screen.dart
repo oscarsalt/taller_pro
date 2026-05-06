@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../api_service.dart';
 import '../theme/app_theme.dart';
+import 'historial_vehiculo_screen.dart';
 
 class VehiculosScreen extends StatefulWidget {
   const VehiculosScreen({super.key});
@@ -249,57 +250,73 @@ class _VehiculosScreenState extends State<VehiculosScreen> {
                           itemCount: vehiculosFiltrados.length,
                           itemBuilder: (context, index) {
                             final v = vehiculosFiltrados[index];
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 10),
-                              decoration: AppTheme.card(),
-                              child: ListTile(
-                                contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 8),
-                                leading: Container(
-                                  width: 44,
-                                  height: 44,
-                                  decoration: BoxDecoration(
-                                    color:
-                                        AppTheme.accentColor.withOpacity(0.15),
-                                    borderRadius: BorderRadius.circular(10),
+                            return GestureDetector(
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => HistorialVehiculoScreen(
+                                      vehiculo: Map<String, dynamic>.from(v)),
+                                ),
+                              ),
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 10),
+                                decoration: AppTheme.card(),
+                                child: ListTile(
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 8),
+                                  leading: Container(
+                                    width: 44,
+                                    height: 44,
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.accentColor
+                                          .withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: const Icon(Icons.directions_car,
+                                        color: AppTheme.accentColor, size: 22),
                                   ),
-                                  child: const Icon(Icons.directions_car,
-                                      color: AppTheme.accentColor, size: 22),
-                                ),
-                                title: Text('${v['marca']} ${v['modelo']}',
-                                    style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w500)),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(v['matricula'] ?? '',
-                                        style: const TextStyle(
-                                            color: AppTheme.accentColor,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold)),
-                                    Text(
+                                  title: Text('${v['marca']} ${v['modelo']}',
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w500)),
+                                  subtitle: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(v['matricula'] ?? '',
+                                          style: const TextStyle(
+                                              color: AppTheme.accentColor,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold)),
+                                      Text(
                                         '${nombreCliente(v['id_cliente'])}${v['anio'] != null && v['anio'].toString().isNotEmpty ? ' · ${v['anio']}' : ''}',
-                                        style: AppTheme.small),
-                                  ],
-                                ),
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
+                                        style: AppTheme.small,
+                                      ),
+                                    ],
+                                  ),
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.history,
+                                          color: Colors.grey, size: 18),
+                                      const SizedBox(width: 4),
+                                      IconButton(
                                         icon: const Icon(Icons.edit_outlined,
                                             color: AppTheme.accentColor,
                                             size: 20),
                                         onPressed: () =>
-                                            _mostrarFormulario(vehiculo: v)),
-                                    IconButton(
+                                            _mostrarFormulario(vehiculo: v),
+                                      ),
+                                      IconButton(
                                         icon: Icon(Icons.delete_outline,
                                             color: AppTheme.dangerColor,
                                             size: 20),
                                         onPressed: () => eliminarVehiculo(
                                             int.parse(
-                                                v['id_vehiculo'].toString()))),
-                                  ],
+                                                v['id_vehiculo'].toString())),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             );
