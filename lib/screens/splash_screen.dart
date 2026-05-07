@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../api_service.dart';
+import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -41,6 +43,26 @@ class _SplashScreenState extends State<SplashScreen>
     if (!mounted) return;
 
     if (token != null && userStr != null) {
+      try {
+        final hoy = DateTime.now();
+        final fecha =
+            '${hoy.year}-${hoy.month.toString().padLeft(2, '0')}-${hoy.day.toString().padLeft(2, '0')}';
+        final res =
+            await ApiService.get('/dashboard/semana?inicio=$fecha&fin=$fecha');
+        print('Fecha buscada: $fecha');
+        print('Respuesta API: $res');
+        if (res is List) {
+          final citasHoy =
+              res.where((c) => c['fecha']?.toString() == fecha).toList();
+          print('Citas de hoy: $citasHoy');
+          if (citasHoy.isNotEmpty) {
+            await NotificationService.mostrarCitasHoy(citasHoy);
+          }
+        }
+      } catch (e) {
+        print('Error notificaciones: $e');
+      }
+
       Navigator.pushReplacementNamed(context, '/dashboard');
     } else {
       Navigator.pushReplacementNamed(context, '/');
