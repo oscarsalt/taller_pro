@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../api_service.dart';
 import '../theme/app_theme.dart';
+import 'historial_cliente_screen.dart';
 
 class ClientesScreen extends StatefulWidget {
   const ClientesScreen({super.key});
@@ -36,18 +37,6 @@ class _ClientesScreenState extends State<ClientesScreen> {
     } catch (e) {
       setState(() => cargando = false);
     }
-  }
-
-  Future<void> crearCliente() async {
-    if (nombreController.text.isEmpty) return;
-    await ApiService.post('/clientes', {
-      'nombre': nombreController.text,
-      'telefono': telefonoController.text,
-      'email': emailController.text,
-      'direccion': direccionController.text,
-    });
-    _limpiar();
-    await cargarClientes();
   }
 
   void _limpiar() {
@@ -114,24 +103,27 @@ class _ClientesScreenState extends State<ClientesScreen> {
               child: ElevatedButton(
                 onPressed: () async {
                   Navigator.pop(ctx);
+                  final data = {
+                    'nombre': nombreController.text,
+                    'telefono': telefonoController.text,
+                    'email': emailController.text,
+                    'direccion': direccionController.text,
+                  };
                   if (cliente != null) {
-                    await ApiService.put('/clientes/${cliente['id_cliente']}', {
-                      'nombre': nombreController.text,
-                      'telefono': telefonoController.text,
-                      'email': emailController.text,
-                      'direccion': direccionController.text,
-                    });
+                    await ApiService.put(
+                        '/clientes/${cliente['id_cliente']}', data);
                   } else {
-                    await crearCliente();
+                    await ApiService.post('/clientes', data);
                   }
                   _limpiar();
                   await cargarClientes();
                 },
                 style: AppTheme.botonPrincipal(),
                 child: Text(
-                    cliente != null ? 'Guardar cambios' : 'Crear cliente',
-                    style: const TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold)),
+                  cliente != null ? 'Guardar cambios' : 'Crear cliente',
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold),
+                ),
               ),
             ),
           ],
@@ -141,24 +133,8 @@ class _ClientesScreenState extends State<ClientesScreen> {
   }
 
   Future<void> eliminarCliente(int id) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.cardColor,
-        title: Text('Eliminar cliente', style: AppTheme.subtitulo),
-        content: Text('¿Estás seguro?', style: AppTheme.muted),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text('Cancelar', style: AppTheme.muted)),
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text('Eliminar',
-                  style: TextStyle(color: AppTheme.dangerColor))),
-        ],
-      ),
-    );
-    if (confirm == true) {
+    final ok = await AppTheme.confirmarEliminar(context, 'cliente');
+    if (ok) {
       await ApiService.delete('/clientes/$id');
       await cargarClientes();
     }
@@ -166,12 +142,12 @@ class _ClientesScreenState extends State<ClientesScreen> {
 
   List<dynamic> get clientesFiltrados {
     if (busqueda.isEmpty) return clientes;
-    final texto = busqueda.toLowerCase();
+    final t = busqueda.toLowerCase();
     return clientes
         .where((c) =>
-            c['nombre']?.toString().toLowerCase().contains(texto) == true ||
-            c['email']?.toString().toLowerCase().contains(texto) == true ||
-            c['telefono']?.toString().contains(texto) == true)
+            c['nombre']?.toString().toLowerCase().contains(t) == true ||
+            c['email']?.toString().toLowerCase().contains(t) == true ||
+            c['telefono']?.toString().contains(t) == true)
         .toList();
   }
 
@@ -196,16 +172,7 @@ class _ClientesScreenState extends State<ClientesScreen> {
                 TextField(
                   style: AppTheme.cuerpo,
                   onChanged: (v) => setState(() => busqueda = v),
-                  decoration: InputDecoration(
-                    hintText: 'Buscar cliente...',
-                    hintStyle: AppTheme.muted,
-                    prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                    filled: true,
-                    fillColor: AppTheme.cardColor,
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide.none),
-                  ),
+                  decoration: AppTheme.searchInput('Buscar cliente...'),
                 ),
               ],
             ),
@@ -226,59 +193,63 @@ class _ClientesScreenState extends State<ClientesScreen> {
                           itemCount: clientesFiltrados.length,
                           itemBuilder: (context, index) {
                             final c = clientesFiltrados[index];
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 10),
-                              decoration: AppTheme.card(),
-                              child: ListTile(
-                                contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 8),
-                                leading: CircleAvatar(
-                                  backgroundColor:
-                                      AppTheme.accentColor.withOpacity(0.2),
-                                  child: Text(
-                                    c['nombre']
-                                            ?.toString()
-                                            .substring(0, 1)
-                                            .toUpperCase() ??
-                                        '?',
-                                    style: const TextStyle(
-                                        color: AppTheme.accentColor,
-                                        fontWeight: FontWeight.bold),
+                            return GestureDetector(
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => HistorialClienteScreen(
+                                    cliente: Map<String, dynamic>.from(c),
                                   ),
                                 ),
-                                title: Text(c['nombre'] ?? '',
-                                    style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w500)),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    if (c['telefono'] != null &&
-                                        c['telefono'].toString().isNotEmpty)
-                                      Text(c['telefono'],
-                                          style: AppTheme.small),
-                                    if (c['email'] != null &&
-                                        c['email'].toString().isNotEmpty)
-                                      Text(c['email'], style: AppTheme.small),
-                                  ],
-                                ),
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
+                              ),
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 10),
+                                decoration: AppTheme.card(),
+                                child: ListTile(
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 8),
+                                  leading: AppTheme.avatar(
+                                      c['nombre']?.toString() ?? '?'),
+                                  title: Text(c['nombre'] ?? '',
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w500)),
+                                  subtitle: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      if (c['telefono'] != null &&
+                                          c['telefono'].toString().isNotEmpty)
+                                        Text(c['telefono'],
+                                            style: AppTheme.small),
+                                      if (c['email'] != null &&
+                                          c['email'].toString().isNotEmpty)
+                                        Text(c['email'], style: AppTheme.small),
+                                    ],
+                                  ),
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.history,
+                                          color: Colors.grey, size: 18),
+                                      const SizedBox(width: 4),
+                                      IconButton(
                                         icon: const Icon(Icons.edit_outlined,
                                             color: AppTheme.accentColor,
                                             size: 20),
                                         onPressed: () =>
-                                            _mostrarFormulario(cliente: c)),
-                                    IconButton(
+                                            _mostrarFormulario(cliente: c),
+                                      ),
+                                      IconButton(
                                         icon: Icon(Icons.delete_outline,
                                             color: AppTheme.dangerColor,
                                             size: 20),
                                         onPressed: () => eliminarCliente(
                                             int.parse(
-                                                c['id_cliente'].toString()))),
-                                  ],
+                                                c['id_cliente'].toString())),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             );

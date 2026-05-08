@@ -15,6 +15,7 @@ class _CitasScreenState extends State<CitasScreen> {
   List<dynamic> vehiculos = [];
   bool cargando = true;
   String busqueda = '';
+  String? filtroEstado; // null = todas
 
   final descripcionController = TextEditingController();
   final manoObraController = TextEditingController();
@@ -67,14 +68,13 @@ class _CitasScreenState extends State<CitasScreen> {
 
   Future<void> _abrirPDF(String rutaPDF) async {
     final url = '${ApiService.baseUrl.replaceAll('/index.php', '')}/$rutaPDF';
-    print('URL PDF: $url');
     final uri = Uri.parse(url);
     try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No se pudo abrir el PDF: $e')),
+          const SnackBar(content: Text('No se pudo abrir el PDF')),
         );
       }
     }
@@ -276,17 +276,52 @@ class _CitasScreenState extends State<CitasScreen> {
   }
 
   List<dynamic> get citasFiltradas {
-    if (busqueda.isEmpty) return citas;
-    final t = busqueda.toLowerCase();
-    return citas
-        .where((c) =>
-            c['nombre']?.toString().toLowerCase().contains(t) == true ||
-            c['marca']?.toString().toLowerCase().contains(t) == true ||
-            c['modelo']?.toString().toLowerCase().contains(t) == true ||
-            c['matricula']?.toString().toLowerCase().contains(t) == true ||
-            c['estado']?.toString().toLowerCase().contains(t) == true ||
-            c['fecha']?.toString().contains(t) == true)
-        .toList();
+    var lista = citas;
+
+    // Filtro por estado
+    if (filtroEstado != null) {
+      lista =
+          lista.where((c) => c['estado']?.toString() == filtroEstado).toList();
+    }
+
+    // Filtro por búsqueda
+    if (busqueda.isNotEmpty) {
+      final t = busqueda.toLowerCase();
+      lista = lista
+          .where((c) =>
+              c['nombre']?.toString().toLowerCase().contains(t) == true ||
+              c['marca']?.toString().toLowerCase().contains(t) == true ||
+              c['modelo']?.toString().toLowerCase().contains(t) == true ||
+              c['matricula']?.toString().toLowerCase().contains(t) == true ||
+              c['estado']?.toString().toLowerCase().contains(t) == true ||
+              c['fecha']?.toString().contains(t) == true)
+          .toList();
+    }
+
+    return lista;
+  }
+
+  Widget _buildFiltroChip(String label, String? valor, Color color) {
+    final activo = filtroEstado == valor;
+    return GestureDetector(
+      onTap: () => setState(() => filtroEstado = activo ? null : valor),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: activo ? color.withOpacity(0.25) : AppTheme.cardColor,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: activo ? color : Colors.white12),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: activo ? color : Colors.grey,
+            fontSize: 12,
+            fontWeight: activo ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -305,13 +340,39 @@ class _CitasScreenState extends State<CitasScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Citas', style: AppTheme.titulo),
+                Row(
+                  children: [
+                    Text('Citas', style: AppTheme.titulo),
+                    const Spacer(),
+                    Text('${citasFiltradas.length} resultados',
+                        style: AppTheme.small),
+                  ],
+                ),
                 const SizedBox(height: 12),
                 TextField(
                   style: AppTheme.cuerpo,
                   onChanged: (v) => setState(() => busqueda = v),
                   decoration: AppTheme.searchInput(
                       'Buscar por cliente, vehículo, estado...'),
+                ),
+                const SizedBox(height: 10),
+                // Filtros por estado
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildFiltroChip('Todas', null, Colors.white),
+                      const SizedBox(width: 8),
+                      _buildFiltroChip(
+                          'Pendiente', 'pendiente', AppTheme.warningColor),
+                      const SizedBox(width: 8),
+                      _buildFiltroChip(
+                          'En proceso', 'en_proceso', AppTheme.infoColor),
+                      const SizedBox(width: 8),
+                      _buildFiltroChip(
+                          'Finalizada', 'finalizada', AppTheme.successColor),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -345,7 +406,6 @@ class _CitasScreenState extends State<CitasScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    // Cabecera vehículo + estado
                                     Row(children: [
                                       Expanded(
                                           child: Text(
@@ -361,8 +421,6 @@ class _CitasScreenState extends State<CitasScreen> {
                                     Text(c['nombre'] ?? '',
                                         style: AppTheme.muted),
                                     const SizedBox(height: 4),
-
-                                    // Fecha y hora
                                     Row(children: [
                                       const Icon(Icons.calendar_today_outlined,
                                           color: Colors.grey, size: 13),
@@ -383,7 +441,6 @@ class _CitasScreenState extends State<CitasScreen> {
                                         style: AppTheme.small,
                                       ),
                                     ]),
-
                                     if (c['descripcion'] != null &&
                                         c['descripcion']
                                             .toString()
@@ -392,10 +449,9 @@ class _CitasScreenState extends State<CitasScreen> {
                                       Text(c['descripcion'],
                                           style: AppTheme.small),
                                     ],
-
                                     const SizedBox(height: 8),
 
-                                    // Botón PDF en línea propia
+                                    // Botón PDF
                                     if (tienePDF) ...[
                                       GestureDetector(
                                         onTap: () => _abrirPDF(
@@ -440,8 +496,6 @@ class _CitasScreenState extends State<CitasScreen> {
                                             fontWeight: FontWeight.bold),
                                       ),
                                       const Spacer(),
-
-                                      // Cambiar estado
                                       PopupMenuButton<String>(
                                         color: AppTheme.inputColor,
                                         child: Container(
@@ -493,8 +547,6 @@ class _CitasScreenState extends State<CitasScreen> {
                                             e),
                                       ),
                                       const SizedBox(width: 4),
-
-                                      // Editar
                                       IconButton(
                                         icon: const Icon(Icons.edit_outlined,
                                             color: AppTheme.accentColor,
@@ -505,8 +557,6 @@ class _CitasScreenState extends State<CitasScreen> {
                                         constraints: const BoxConstraints(),
                                       ),
                                       const SizedBox(width: 8),
-
-                                      // Eliminar
                                       IconButton(
                                         icon: Icon(Icons.delete_outline,
                                             color: AppTheme.dangerColor,
